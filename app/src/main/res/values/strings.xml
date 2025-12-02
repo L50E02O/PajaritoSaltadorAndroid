@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pajarito Saltador</string>
+    <string name="start_game">Comenzar</string>
+    <string name="restart_game">Jugar de Nuevo</string>
+    <string name="game_over">¡Game Over!</string>
+    <string name="score">Puntuación: %d</string>
+    <string name="high_score">Récord: %d</string>
+    <string name="tap_to_jump">Toca para saltar</string>
+    <string name="avoid_pipes">Evita los tubos</string>
+    <string name="ability_button">Escudo</string>
+    <string name="ability_active">Escudo Activo</string>
+    <string name="ability_cooldown">En Cooldown</string>
+</resources>
+
