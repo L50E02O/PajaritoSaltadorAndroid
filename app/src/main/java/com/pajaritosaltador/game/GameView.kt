@@ -2,6 +2,8 @@ package com.pajaritosaltador.game
 
 import android.content.Context
 import android.graphics.*
+import android.os.Handler
+import android.os.Looper
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.SurfaceHolder
@@ -85,6 +87,13 @@ class GameView @JvmOverloads constructor(
     // SharedPreferences para high score
     private val prefs = context.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
     
+    // Handler para actualizaciones de UI en el thread principal
+    private val uiHandler = Handler(Looper.getMainLooper())
+    
+    // Cache para evitar actualizaciones innecesarias de UI
+    private var lastAbilityText = ""
+    private var lastAbilityCooldown = -1f
+    
     init {
         holder.addCallback(this)
         isFocusable = true
@@ -139,6 +148,10 @@ class GameView @JvmOverloads constructor(
      * Inicia el juego
      */
     fun startGame() {
+        // Resetear estado de muerte si estaba muriendo
+        gameLogic.birdIsDying = false
+        gameLogic.birdDeathAnimationTime = 0f
+        
         gameLogic.startGame()
         onGameStart?.invoke()
         updateAbilityUI()
@@ -170,7 +183,19 @@ class GameView @JvmOverloads constructor(
             ability.cooldownTimer > 0 -> context.getString(R.string.ability_cooldown)
             else -> context.getString(R.string.ability_button)
         }
-        onAbilityUpdate?.invoke(text, ability.cooldownTimer)
+        val cooldown = ability.cooldownTimer
+        
+        // Solo actualizar si cambió algo (evitar saturar el Handler)
+        val cooldownInt = cooldown.toInt()
+        if (text != lastAbilityText || cooldownInt != lastAbilityCooldown.toInt()) {
+            lastAbilityText = text
+            lastAbilityCooldown = cooldown
+            
+            // Asegurar que las actualizaciones de UI se hagan en el thread principal
+            uiHandler.post {
+                onAbilityUpdate?.invoke(text, cooldown)
+            }
+        }
     }
     
     override fun surfaceCreated(holder: SurfaceHolder) {
@@ -186,6 +211,11 @@ class GameView @JvmOverloads constructor(
     }
     
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // Si el juego está en GAME_OVER, no interceptar toques (dejar que los botones funcionen)
+        if (gameLogic.state == GameLogic.GameState.GAME_OVER) {
+            return false
+        }
+        
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val now = System.currentTimeMillis()
@@ -214,6 +244,7 @@ class GameView @JvmOverloads constructor(
      * Resume el juego
      */
     fun resume() {
+        if (isRunning) return // Evitar crear múltiples threads
         isRunning = true
         gameThread = GameThread()
         gameThread?.start()
@@ -223,9 +254,10 @@ class GameView @JvmOverloads constructor(
      * Pausa el juego
      */
     fun pause() {
+        if (!isRunning) return // Evitar pausar si ya está pausado
         isRunning = false
         try {
-            gameThread?.join()
+            gameThread?.join(100) // Timeout de 100ms para evitar bloqueos
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }
@@ -254,8 +286,16 @@ class GameView @JvmOverloads constructor(
                 val shouldJump = jumpRequested
                 jumpRequested = false
                 
-                gameLogic.update(clampedDelta, shouldJump)
-                updateAbilityUI()
+                try {
+                    gameLogic.update(clampedDelta, shouldJump)
+                    // Actualizar UI solo cada cierto tiempo para evitar saturación
+                    if (System.currentTimeMillis() % 100 < 16) { // ~60 veces por segundo máximo
+                        updateAbilityUI()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("GameView", "Error en update del juego", e)
+                    e.printStackTrace()
+                }
                 
                 // Renderizar
                 var canvas: Canvas? = null
@@ -265,12 +305,14 @@ class GameView @JvmOverloads constructor(
                         render(canvas)
                     }
                 } catch (e: Exception) {
+                    android.util.Log.e("GameView", "Error al renderizar", e)
                     e.printStackTrace()
                 } finally {
                     canvas?.let {
                         try {
                             holder.unlockCanvasAndPost(it)
                         } catch (e: Exception) {
+                            android.util.Log.e("GameView", "Error al desbloquear canvas", e)
                             e.printStackTrace()
                         }
                     }

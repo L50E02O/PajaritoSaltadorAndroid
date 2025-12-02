@@ -131,6 +131,9 @@ class GameLogic(
             Physics.applyGravity(bird, gravity * 1.5f, deltaTime)
             Physics.clampVelocity(bird, maxVelocity * 1.5f)
             
+            // Actualizar posición
+            bird.y += bird.velocity * deltaTime
+            
             // Rotación hacia abajo
             val targetRotation = Math.PI.toFloat()
             bird.rotation += (targetRotation - bird.rotation) * 0.15f
@@ -154,6 +157,9 @@ class GameLogic(
         // Gravedad
         Physics.applyGravity(bird, gravity, deltaTime)
         Physics.clampVelocity(bird, maxVelocity)
+        
+        // Actualizar posición basada en velocidad
+        bird.y += bird.velocity * deltaTime
         
         // Rotación basada en velocidad
         val targetRotation = (bird.velocity * 0.002f).coerceAtMost(Math.PI.toFloat() / 2)
@@ -198,15 +204,19 @@ class GameLogic(
         }
         
         // Verificar si el pájaro pasó un tubo
+        // Optimizado: solo verificar tubos cercanos al pájaro
         pipes.forEach { pipe ->
             if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
                 pipe.passed = true
-                // Solo contar cuando pasan ambos tubos del par
-                val pair = pipes.filter { 
-                    Math.abs(it.x - pipe.x) < 10f && it.passed 
+                // Buscar el tubo par (superior o inferior) más eficientemente
+                val pairPipe = pipes.find { 
+                    it != pipe && 
+                    Math.abs(it.x - pipe.x) < 10f && 
+                    (it.y == 0f || pipe.y == 0f) // Uno es superior (y=0) y otro inferior
                 }
-                if (pair.size == 2) {
-                    val oldScore = score
+                
+                // Solo contar cuando ambos tubos del par han sido pasados
+                if (pairPipe != null && pairPipe.passed) {
                     score++
                     onScoreChanged?.invoke(score)
                     

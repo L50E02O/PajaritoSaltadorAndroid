@@ -151,6 +151,8 @@
         android:gravity="center"
         android:background="@color/overlay_dark"
         android:padding="32dp"
+        android:clickable="true"
+        android:focusable="true"
         android:visibility="gone">
 
         <TextView
