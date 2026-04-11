@@ -128,6 +128,10 @@ La APK generada suele quedar en `app/build/outputs/apk/release/`. Para compartir
 
 ---
 
-## Licencia y autoría
+## Licencia
 
-Define aquí la licencia del proyecto y los créditos que consideres oportunos.
+Este proyecto se publica bajo la **Licencia MIT**. El texto legal completo está en el archivo [`LICENSE`](LICENSE) en la raíz del repositorio.
+
+En resumen: puedes usar, copiar, modificar, fusionar, publicar, distribuir, sublicenciar y vender copias del software, siempre que incluyas el aviso de copyright y la misma licencia en las copias o partes sustanciales. El software se ofrece «tal cual», sin garantía de ningún tipo.
+
+Si deseas atribuir el trabajo de terceros o recursos con otra licencia (p. ej. música o gráficos), indícalo aquí o en un archivo `NOTICE` aparte.
