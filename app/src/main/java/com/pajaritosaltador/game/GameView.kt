@@ -11,416 +11,315 @@ import android.view.SurfaceView
 import kotlin.math.*
 
 /**
- * Vista del juego con renderizado en Canvas
+ * Vista del juego con renderizado en Canvas.
+ * Usa un viewport virtual de 9:16 y escala a cualquier pantalla.
  */
 class GameView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : SurfaceView(context, attrs, defStyleAttr), SurfaceHolder.Callback {
-    
-    private val holder: SurfaceHolder = getHolder()
+
+    private val surfaceHolderRef: SurfaceHolder = getHolder()
     private var gameThread: GameThread? = null
     private var isRunning = false
-    
-    // Viewport virtual (lógica del juego)
-    private val viewportWidth = 400f
-    private val viewportHeight = 600f
-    
-    // Lógica del juego
-    private lateinit var gameLogic: GameLogic
-    
-    // Paint objects
-    private val birdPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
-    
-    private val pipePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
-    
+
+    private val viewportWidth = 360f
+    private val viewportHeight = 640f
+
+    lateinit var gameLogic: GameLogic
+        private set
+
+    // Paints reutilizables
+    private val birdPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val pipePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val pipeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+        strokeWidth = 3f
     }
-    
-    private val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
-    
+    private val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shieldStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 4f
-        isAntiAlias = true
+        strokeWidth = 3f
     }
-    
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 32f
-        typeface = Typeface.DEFAULT_BOLD
+    private val collectiblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val collectibleGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val bgPaint = Paint()
+    private val cloudPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(120, 255, 255, 255)
+        style = Paint.Style.FILL
     }
-    
+    private val groundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val x2OverlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(30, 255, 100, 0)
+        style = Paint.Style.FILL
+    }
+
     // Colores
-    private val skyBlueLight = Color.parseColor("#87CEEB")
-    private val skyBlueMedium = Color.parseColor("#98D8E8")
-    private val skyBlueDark = Color.parseColor("#B0E0E6")
+    private val skyTop = Color.parseColor("#87CEEB")
+    private val skyBottom = Color.parseColor("#E0F7FA")
     private val birdYellow = Color.parseColor("#FFD700")
     private val birdOrange = Color.parseColor("#FF8C00")
     private val pipeGreen = Color.parseColor("#228B22")
     private val pipeGreenDark = Color.parseColor("#006400")
     private val pipeGreenLight = Color.parseColor("#32CD32")
+    private val pipeCap = Color.parseColor("#2E7D32")
     private val shieldGold = Color.parseColor("#FFD700")
-    
+    private val collectibleCyan = Color.parseColor("#00E5FF")
+    private val collectiblePurple = Color.parseColor("#AA00FF")
+    private val groundBrown = Color.parseColor("#8D6E63")
+    private val groundGreen = Color.parseColor("#66BB6A")
+
+    // Nubes con posiciones relativas al viewport
+    private data class Cloud(val baseX: Float, val y: Float, val scale: Float)
+    private val clouds = listOf(
+        Cloud(0.1f, 0.12f, 1f),
+        Cloud(0.55f, 0.08f, 1.3f),
+        Cloud(0.3f, 0.22f, 0.8f),
+        Cloud(0.75f, 0.18f, 1.1f),
+        Cloud(0.9f, 0.28f, 0.7f)
+    )
+
     // Input
     private var jumpRequested = false
     private var lastTouchTime = 0L
-    private val touchCooldown = 100L
-    
-    // Callbacks
-    private var onScoreUpdate: ((Int) -> Unit)? = null
-    private var onHighScoreUpdate: ((Int) -> Unit)? = null
-    private var onGameOver: ((Int) -> Unit)? = null
-    private var onGameStart: (() -> Unit)? = null
-    private var onAbilityUpdate: ((String, Float) -> Unit)? = null
-    
-    // SharedPreferences para high score
-    private val prefs = context.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
-    
-    // Handler para actualizaciones de UI en el thread principal
+    private val touchCooldown = 80L
+
+    // Callbacks al Activity
+    var onScoreUpdate: ((Int) -> Unit)? = null
+    var onHighScoreUpdate: ((Int) -> Unit)? = null
+    var onGameOver: ((Int) -> Unit)? = null
+    var onGameStart: (() -> Unit)? = null
+    var onPowerUpStateChanged: (() -> Unit)? = null
+    var onPauseChanged: ((Boolean) -> Unit)? = null
+
     private val uiHandler = Handler(Looper.getMainLooper())
-    
-    // Cache para evitar actualizaciones innecesarias de UI
-    private var lastAbilityText = ""
-    private var lastAbilityCooldown = -1f
-    
+
     init {
-        holder.addCallback(this)
+        surfaceHolderRef.addCallback(this)
         isFocusable = true
-        
-        // Inicializar lógica del juego
-        val savedHighScore = prefs.getInt("high_score", 0)
         gameLogic = GameLogic(viewportWidth, viewportHeight)
-        gameLogic.highScore = savedHighScore
         setupGameCallbacks()
     }
-    
-    /**
-     * Configura los callbacks del juego
-     */
+
     private fun setupGameCallbacks() {
         gameLogic.onScoreChanged = { score ->
-            onScoreUpdate?.invoke(score)
+            uiHandler.post { onScoreUpdate?.invoke(score) }
         }
-        
-        gameLogic.onHighScoreChanged = { highScore ->
-            prefs.edit().putInt("high_score", highScore).apply()
-            onHighScoreUpdate?.invoke(highScore)
+        gameLogic.onHighScoreChanged = { hs ->
+            uiHandler.post { onHighScoreUpdate?.invoke(hs) }
         }
-        
         gameLogic.onGameOver = { score ->
-            onGameOver?.invoke(score)
+            uiHandler.post { onGameOver?.invoke(score) }
         }
-        
-        gameLogic.onDifficultyIncrease = { level ->
-            // Notificación de aumento de dificultad (opcional)
+        gameLogic.onCollectiblePickup = {
+            uiHandler.post { onPowerUpStateChanged?.invoke() }
+        }
+        gameLogic.onPipeDestroyed = {
+            uiHandler.post { onPowerUpStateChanged?.invoke() }
+        }
+        gameLogic.onPauseChanged = { paused ->
+            uiHandler.post { onPauseChanged?.invoke(paused) }
         }
     }
-    
-    /**
-     * Configura los callbacks de UI
-     */
-    fun setupUI(
-        onScoreUpdate: (Int) -> Unit,
-        onHighScoreUpdate: (Int) -> Unit,
-        onGameOver: (Int) -> Unit,
-        onGameStart: () -> Unit,
-        onAbilityUpdate: (String, Float) -> Unit
-    ) {
-        this.onScoreUpdate = onScoreUpdate
-        this.onHighScoreUpdate = onHighScoreUpdate
-        this.onGameOver = onGameOver
-        this.onGameStart = onGameStart
-        this.onAbilityUpdate = onAbilityUpdate
-    }
-    
-    /**
-     * Inicia el juego
-     */
+
     fun startGame() {
-        // Resetear estado de muerte si estaba muriendo
         gameLogic.birdIsDying = false
         gameLogic.birdDeathAnimationTime = 0f
-        
         gameLogic.startGame()
-        onGameStart?.invoke()
-        updateAbilityUI()
+        uiHandler.post { onGameStart?.invoke() }
     }
-    
-    /**
-     * Activa la habilidad
-     */
-    fun activateAbility() {
-        if (gameLogic.activateInvulnerability()) {
-            updateAbilityUI()
-        }
+
+    fun activateInvincibility(): Boolean {
+        val result = gameLogic.activateInvincibility()
+        if (result) uiHandler.post { onPowerUpStateChanged?.invoke() }
+        return result
     }
-    
-    /**
-     * Obtiene el high score
-     */
-    fun getHighScore(): Int {
-        return prefs.getInt("high_score", 0)
+
+    fun activateSpeedX2(): Boolean {
+        val result = gameLogic.activateSpeedX2()
+        if (result) uiHandler.post { onPowerUpStateChanged?.invoke() }
+        return result
     }
-    
-    /**
-     * Actualiza la UI de la habilidad
-     */
-    private fun updateAbilityUI() {
-        val ability = gameLogic.invulnerability
-        val text = when {
-            ability.active -> context.getString(R.string.ability_active)
-            ability.cooldownTimer > 0 -> context.getString(R.string.ability_cooldown)
-            else -> context.getString(R.string.ability_button)
-        }
-        val cooldown = ability.cooldownTimer
-        
-        // Solo actualizar si cambió algo (evitar saturar el Handler)
-        val cooldownInt = cooldown.toInt()
-        if (text != lastAbilityText || cooldownInt != lastAbilityCooldown.toInt()) {
-            lastAbilityText = text
-            lastAbilityCooldown = cooldown
-            
-            // Asegurar que las actualizaciones de UI se hagan en el thread principal
-            uiHandler.post {
-                onAbilityUpdate?.invoke(text, cooldown)
-            }
-        }
+
+    fun destroyNearestPipe(): Boolean {
+        val result = gameLogic.destroyNearestPipe()
+        if (result) uiHandler.post { onPowerUpStateChanged?.invoke() }
+        return result
     }
-    
-    override fun surfaceCreated(holder: SurfaceHolder) {
-        resume()
+
+    fun pauseGame() {
+        gameLogic.pauseGame()
     }
-    
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        // El viewport se mantiene constante, solo se escala el renderizado
+
+    fun resumeGame() {
+        gameLogic.resumeGame()
     }
-    
-    override fun surfaceDestroyed(holder: SurfaceHolder) {
-        pause()
-    }
-    
+
+    override fun surfaceCreated(holder: SurfaceHolder) { resume() }
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, w: Int, h: Int) {}
+    override fun surfaceDestroyed(holder: SurfaceHolder) { pause() }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Si el juego está en GAME_OVER, no interceptar toques (dejar que los botones funcionen)
-        if (gameLogic.state == GameLogic.GameState.GAME_OVER) {
-            return false
-        }
-        
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                val now = System.currentTimeMillis()
-                if (now - lastTouchTime < touchCooldown) {
-                    return true
-                }
-                lastTouchTime = now
-                
-                // No procesar si es un botón
-                if (event.y < 100 || event.y > height - 200) {
-                    return super.onTouchEvent(event)
-                }
-                
-                if (gameLogic.state == GameLogic.GameState.PLAYING) {
-                    jumpRequested = true
-                } else if (gameLogic.state == GameLogic.GameState.START) {
-                    startGame()
-                }
-                return true
+        if (gameLogic.state == GameLogic.GameState.GAME_OVER) return false
+        if (gameLogic.state == GameLogic.GameState.PAUSED) return false
+
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            val now = System.currentTimeMillis()
+            if (now - lastTouchTime < touchCooldown) return true
+            lastTouchTime = now
+
+            if (gameLogic.state == GameLogic.GameState.PLAYING) {
+                jumpRequested = true
+            } else if (gameLogic.state == GameLogic.GameState.START) {
+                startGame()
             }
+            return true
         }
         return super.onTouchEvent(event)
     }
-    
-    /**
-     * Resume el juego
-     */
+
     fun resume() {
-        if (isRunning) return // Evitar crear múltiples threads
+        if (isRunning) return
         isRunning = true
         gameThread = GameThread()
         gameThread?.start()
     }
-    
-    /**
-     * Pausa el juego
-     */
+
     fun pause() {
-        if (!isRunning) return // Evitar pausar si ya está pausado
+        if (!isRunning) return
         isRunning = false
         try {
-            gameThread?.join(100) // Timeout de 100ms para evitar bloqueos
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
+            gameThread?.join(150)
+        } catch (_: InterruptedException) {}
         gameThread = null
     }
-    
-    /**
-     * Thread del juego
-     */
-    private inner class GameThread : Thread() {
+
+    private inner class GameThread : Thread("GameThread") {
         private val targetFPS = 60
-        private val targetTime = 1000 / targetFPS
-        
+        private val targetTime = 1000L / targetFPS
+        private var frameCount = 0
+
         override fun run() {
             var lastTime = System.currentTimeMillis()
-            
+
             while (isRunning) {
                 val currentTime = System.currentTimeMillis()
-                val deltaTime = (currentTime - lastTime) / 1000f
+                val deltaTime = ((currentTime - lastTime) / 1000f).coerceIn(0f, 0.05f)
                 lastTime = currentTime
-                
-                // Limitar deltaTime para evitar saltos grandes
-                val clampedDelta = deltaTime.coerceIn(0f, 0.1f)
-                
-                // Actualizar juego
+
                 val shouldJump = jumpRequested
                 jumpRequested = false
-                
+
                 try {
-                    gameLogic.update(clampedDelta, shouldJump)
-                    // Actualizar UI solo cada cierto tiempo para evitar saturación
-                    if (System.currentTimeMillis() % 100 < 16) { // ~60 veces por segundo máximo
-                        updateAbilityUI()
+                    gameLogic.update(deltaTime, shouldJump)
+                    frameCount++
+                    if (frameCount % 3 == 0) {
+                        uiHandler.post { onPowerUpStateChanged?.invoke() }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.e("GameView", "Error en update del juego", e)
-                    e.printStackTrace()
+                    android.util.Log.e("GameView", "Error en update", e)
                 }
-                
-                // Renderizar
+
                 var canvas: Canvas? = null
                 try {
-                    canvas = holder.lockCanvas()
-                    if (canvas != null) {
-                        render(canvas)
-                    }
+                    canvas = surfaceHolderRef.lockCanvas()
+                    if (canvas != null) render(canvas)
                 } catch (e: Exception) {
                     android.util.Log.e("GameView", "Error al renderizar", e)
-                    e.printStackTrace()
                 } finally {
                     canvas?.let {
-                        try {
-                            holder.unlockCanvasAndPost(it)
-                        } catch (e: Exception) {
-                            android.util.Log.e("GameView", "Error al desbloquear canvas", e)
-                            e.printStackTrace()
-                        }
+                        try { surfaceHolderRef.unlockCanvasAndPost(it) }
+                        catch (_: Exception) {}
                     }
                 }
-                
-                // Control de FPS
+
                 val sleepTime = targetTime - (System.currentTimeMillis() - currentTime)
-                if (sleepTime > 0) {
-                    sleep(sleepTime)
-                }
+                if (sleepTime > 0) sleep(sleepTime)
             }
         }
     }
-    
-    /**
-     * Renderiza el juego
-     */
+
     private fun render(canvas: Canvas) {
-        // Calcular escalado para mantener aspect ratio
-        val screenWidth = width.toFloat()
-        val screenHeight = height.toFloat()
-        val scaleX = screenWidth / viewportWidth
-        val scaleY = screenHeight / viewportHeight
+        val screenW = width.toFloat()
+        val screenH = height.toFloat()
+        val scaleX = screenW / viewportWidth
+        val scaleY = screenH / viewportHeight
         val scale = min(scaleX, scaleY)
-        
-        val scaledWidth = viewportWidth * scale
-        val scaledHeight = viewportHeight * scale
-        val offsetX = (screenWidth - scaledWidth) / 2
-        val offsetY = (screenHeight - scaledHeight) / 2
-        
-        // Limpiar canvas
-        canvas.drawColor(skyBlueLight)
-        
-        // Guardar estado
+
+        val scaledW = viewportWidth * scale
+        val scaledH = viewportHeight * scale
+        val offsetX = (screenW - scaledW) / 2
+        val offsetY = (screenH - scaledH) / 2
+
+        canvas.drawColor(skyTop)
         canvas.save()
-        
-        // Aplicar transformación
         canvas.translate(offsetX, offsetY)
         canvas.scale(scale, scale)
-        
-        // Dibujar fondo
+
         drawBackground(canvas)
-        
-        // Dibujar tubos
-        gameLogic.pipes.forEach { pipe ->
-            drawPipe(canvas, pipe)
-        }
-        
-        // Dibujar pájaro
+        drawGround(canvas)
+
+        gameLogic.pipes.forEach { drawPipe(canvas, it) }
+        gameLogic.collectibles.forEach { drawCollectible(canvas, it) }
         drawBird(canvas)
-        
-        // Restaurar estado
+
+        if (gameLogic.powerUpManager.speedX2.isActive) {
+            canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, x2OverlayPaint)
+        }
+
         canvas.restore()
     }
-    
-    /**
-     * Dibuja el fondo
-     */
+
     private fun drawBackground(canvas: Canvas) {
         val gradient = LinearGradient(
-            0f, 0f, 0f, viewportHeight,
-            intArrayOf(skyBlueLight, skyBlueMedium, skyBlueDark),
-            null,
-            Shader.TileMode.CLAMP
+            0f, 0f, 0f, viewportHeight * 0.85f,
+            skyTop, skyBottom, Shader.TileMode.CLAMP
         )
-        val paint = Paint().apply {
-            shader = gradient
+        bgPaint.shader = gradient
+        canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, bgPaint)
+        bgPaint.shader = null
+
+        val scrollOffset = gameLogic.backgroundScrollX
+        clouds.forEach { cloud ->
+            val cx = ((cloud.baseX * viewportWidth - scrollOffset * cloud.scale * 0.5f) % (viewportWidth + 80f) + viewportWidth + 80f) % (viewportWidth + 80f) - 40f
+            drawCloud(canvas, cx, cloud.y * viewportHeight, cloud.scale)
         }
-        canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, paint)
-        
-        // Nubes simples
-        drawCloud(canvas, 80f, 100f)
-        drawCloud(canvas, 250f, 150f)
-        drawCloud(canvas, 150f, 250f)
     }
-    
-    /**
-     * Dibuja una nube
-     */
-    private fun drawCloud(canvas: Canvas, x: Float, y: Float) {
-        val cloudPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(153, 255, 255, 255) // 60% opacidad
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(x, y, 20f, cloudPaint)
-        canvas.drawCircle(x + 25f, y, 25f, cloudPaint)
-        canvas.drawCircle(x + 50f, y, 20f, cloudPaint)
+
+    private fun drawCloud(canvas: Canvas, x: Float, y: Float, scale: Float) {
+        val s = 18f * scale
+        canvas.drawCircle(x, y, s, cloudPaint)
+        canvas.drawCircle(x + s * 1.4f, y, s * 1.25f, cloudPaint)
+        canvas.drawCircle(x + s * 2.8f, y, s, cloudPaint)
     }
-    
-    /**
-     * Dibuja el pájaro
-     */
+
+    private fun drawGround(canvas: Canvas) {
+        val groundTop = viewportHeight * 0.92f
+        groundPaint.color = groundGreen
+        canvas.drawRect(0f, groundTop, viewportWidth, groundTop + 6f, groundPaint)
+        groundPaint.color = groundBrown
+        canvas.drawRect(0f, groundTop + 6f, viewportWidth, viewportHeight, groundPaint)
+    }
+
     private fun drawBird(canvas: Canvas) {
         val bird = gameLogic.bird
-        val isInvulnerable = gameLogic.invulnerability.active && !gameLogic.birdIsDying
-        
+        val isInvincible = gameLogic.powerUpManager.invincibility.isActive && !gameLogic.birdIsDying
+        val isX2 = gameLogic.powerUpManager.speedX2.isActive && !gameLogic.birdIsDying
+
         canvas.save()
         canvas.translate(bird.x + bird.width / 2, bird.y + bird.height / 2)
         canvas.rotate(Math.toDegrees(bird.rotation.toDouble()).toFloat())
-        
-        // Escudo si está invulnerable
-        if (isInvulnerable) {
-            val shieldRadius = bird.width / 2 + 15f
+
+        val bodyRadius = bird.width * 0.3f
+
+        if (isInvincible) {
+            val shieldRadius = bodyRadius + bird.width * 0.35f
             val shieldGradient = RadialGradient(
                 0f, 0f, shieldRadius,
                 intArrayOf(
-                    Color.argb(204, 255, 215, 0),
-                    Color.argb(102, 255, 215, 0),
+                    Color.argb(180, 255, 215, 0),
+                    Color.argb(80, 255, 215, 0),
                     Color.argb(0, 255, 215, 0)
                 ),
                 floatArrayOf(0f, 0.5f, 1f),
@@ -428,102 +327,203 @@ class GameView @JvmOverloads constructor(
             )
             shieldPaint.shader = shieldGradient
             canvas.drawCircle(0f, 0f, shieldRadius, shieldPaint)
-            
+            shieldPaint.shader = null
+
             shieldStrokePaint.color = shieldGold
-            canvas.drawCircle(0f, 0f, bird.width / 2 + 10f, shieldStrokePaint)
+            canvas.drawCircle(0f, 0f, bodyRadius + bird.width * 0.25f, shieldStrokePaint)
         }
-        
-        // Efectos de muerte
+
+        if (isX2) {
+            val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(60, 255, 100, 0)
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(0f, 0f, bodyRadius + bird.width * 0.2f, glowPaint)
+        }
+
         if (gameLogic.birdIsDying) {
-            val blinkPhase = ((gameLogic.birdDeathAnimationTime * 10).toInt() % 20) / 10f
-            if (blinkPhase < 1) {
-                val redPaint = Paint().apply {
-                    color = Color.argb(76, 255, 0, 0) // 30% rojo
-                }
-                canvas.drawRect(-bird.width / 2 - 5, -bird.height / 2 - 5,
-                    bird.width / 2 + 5, bird.height / 2 + 5, redPaint)
+            val blinkPhase = ((gameLogic.birdDeathAnimationTime * 10).toInt() % 2)
+            if (blinkPhase == 0) {
+                val redPaint = Paint().apply { color = Color.argb(76, 255, 0, 0) }
+                canvas.drawCircle(0f, 0f, bodyRadius + 4f, redPaint)
             }
         }
-        
-        // Cuerpo del pájaro
+
         val bodyColor = if (gameLogic.birdIsDying) Color.parseColor("#CCAA00") else birdYellow
         birdPaint.color = bodyColor
-        canvas.drawCircle(0f, 0f, 12f, birdPaint)
-        
-        // Ojo
+        canvas.drawCircle(0f, 0f, bodyRadius, birdPaint)
+
         if (!gameLogic.birdIsDying) {
+            birdPaint.color = Color.WHITE
+            canvas.drawCircle(bodyRadius * 0.35f, -bodyRadius * 0.25f, bodyRadius * 0.28f, birdPaint)
             birdPaint.color = Color.BLACK
-            canvas.drawCircle(5f, -3f, 3f, birdPaint)
+            canvas.drawCircle(bodyRadius * 0.42f, -bodyRadius * 0.22f, bodyRadius * 0.14f, birdPaint)
         } else {
-            // Ojo cerrado
             val eyePaint = Paint().apply {
                 color = Color.BLACK
                 style = Paint.Style.STROKE
                 strokeWidth = 2f
             }
-            canvas.drawLine(2f, -3f, 8f, -3f, eyePaint)
+            canvas.drawLine(-bodyRadius * 0.1f, -bodyRadius * 0.25f,
+                bodyRadius * 0.4f, -bodyRadius * 0.25f, eyePaint)
         }
-        
-        // Pico
+
         val beakColor = if (gameLogic.birdIsDying) Color.parseColor("#CC6600") else birdOrange
         birdPaint.color = beakColor
         val beakPath = Path().apply {
-            moveTo(12f, 0f)
-            lineTo(20f, -3f)
-            lineTo(20f, 3f)
+            moveTo(bodyRadius, 0f)
+            lineTo(bodyRadius + bird.width * 0.2f, -bodyRadius * 0.25f)
+            lineTo(bodyRadius + bird.width * 0.2f, bodyRadius * 0.25f)
             close()
         }
         canvas.drawPath(beakPath, birdPaint)
-        
-        // Alas
+
         if (!gameLogic.birdIsDying && gameLogic.birdWingPhase > 0) {
             val wingAngle = sin(gameLogic.birdWingPhase) * 0.5f
-            val wingColor = if (gameLogic.birdIsDying) Color.parseColor("#CC8800") else birdOrange
-            
-            // Ala izquierda
             canvas.save()
-            canvas.translate(-5f, 5f)
+            canvas.translate(-bodyRadius * 0.3f, bodyRadius * 0.4f)
             canvas.rotate(Math.toDegrees((-0.3 + wingAngle).toDouble()).toFloat())
-            birdPaint.color = wingColor
-            val wingRect = RectF(-8f, -5f, 8f, 5f)
-            canvas.drawOval(wingRect, birdPaint)
+            birdPaint.color = birdOrange
+            canvas.drawOval(RectF(-bodyRadius * 0.6f, -bodyRadius * 0.35f,
+                bodyRadius * 0.6f, bodyRadius * 0.35f), birdPaint)
             canvas.restore()
         } else if (gameLogic.birdIsDying) {
-            // Alas caídas
             canvas.save()
-            canvas.translate(-5f, 5f)
-            canvas.rotate(28.6f) // 0.5 radianes
+            canvas.translate(-bodyRadius * 0.3f, bodyRadius * 0.4f)
+            canvas.rotate(28.6f)
             birdPaint.color = Color.parseColor("#CC8800")
-            val wingRect = RectF(-8f, -5f, 8f, 5f)
-            canvas.drawOval(wingRect, birdPaint)
+            canvas.drawOval(RectF(-bodyRadius * 0.6f, -bodyRadius * 0.35f,
+                bodyRadius * 0.6f, bodyRadius * 0.35f), birdPaint)
             canvas.restore()
         }
-        
+
         canvas.restore()
     }
-    
-    /**
-     * Dibuja un tubo
-     */
+
     private fun drawPipe(canvas: Canvas, pipe: Pipe) {
-        if (pipe.x + pipe.width < -50f || pipe.x > viewportWidth + 50f) {
-            return
+        if (pipe.x + pipe.width < -20f || pipe.x > viewportWidth + 20f) return
+
+        val capHeight = pipe.width * 0.28f
+        val capOverhang = pipe.width * 0.12f
+        val cornerRadius = pipe.width * 0.06f
+        val isTopPipe = pipe.y == 0f
+
+        // Sombra del cuerpo
+        val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(40, 0, 0, 0)
+            style = Paint.Style.FILL
         }
-        
-        // Tubo principal
-        pipePaint.color = pipeGreen
+        canvas.drawRect(pipe.x + 3f, pipe.y, pipe.x + pipe.width + 3f, pipe.y + pipe.height, shadowPaint)
+
+        // Cuerpo con gradiente horizontal (claro a oscuro, simula cilindro)
+        val bodyGradient = LinearGradient(
+            pipe.x, 0f, pipe.x + pipe.width, 0f,
+            intArrayOf(
+                Color.parseColor("#3DA542"),
+                Color.parseColor("#5BBF3E"),
+                Color.parseColor("#74D44E"),
+                Color.parseColor("#5BBF3E"),
+                Color.parseColor("#2D8B34")
+            ),
+            floatArrayOf(0f, 0.2f, 0.4f, 0.7f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        pipePaint.shader = bodyGradient
         canvas.drawRect(pipe.x, pipe.y, pipe.x + pipe.width, pipe.y + pipe.height, pipePaint)
-        
-        // Borde oscuro
-        pipeStrokePaint.color = pipeGreenDark
-        pipeStrokePaint.strokeWidth = 4f
-        canvas.drawRect(pipe.x, pipe.y, pipe.x + pipe.width, pipe.y + pipe.height, pipeStrokePaint)
-        
-        // Borde claro interno
-        pipeStrokePaint.color = pipeGreenLight
+        pipePaint.shader = null
+
+        // Borde oscuro del cuerpo
+        pipeStrokePaint.color = Color.parseColor("#1B5E20")
         pipeStrokePaint.strokeWidth = 2f
-        canvas.drawRect(pipe.x + 2, pipe.y + 2,
-            pipe.x + pipe.width - 2, pipe.y + pipe.height - 2, pipeStrokePaint)
+        canvas.drawRect(pipe.x, pipe.y, pipe.x + pipe.width, pipe.y + pipe.height, pipeStrokePaint)
+
+        // Franja de brillo especular (reflejo vertical)
+        val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(70, 255, 255, 255)
+            style = Paint.Style.FILL
+        }
+        canvas.drawRect(
+            pipe.x + pipe.width * 0.2f, pipe.y,
+            pipe.x + pipe.width * 0.35f, pipe.y + pipe.height, highlightPaint
+        )
+
+        // Tapa (cap) con gradiente y bordes redondeados
+        val capLeft = pipe.x - capOverhang
+        val capRight = pipe.x + pipe.width + capOverhang
+        val capTop: Float
+        val capBottom: Float
+
+        if (isTopPipe) {
+            capTop = pipe.height - capHeight
+            capBottom = pipe.height
+        } else {
+            capTop = pipe.y
+            capBottom = pipe.y + capHeight
+        }
+
+        // Sombra de la tapa
+        canvas.drawRoundRect(
+            capLeft + 3f, capTop + 2f, capRight + 3f, capBottom + 2f,
+            cornerRadius, cornerRadius, shadowPaint
+        )
+
+        // Gradiente de la tapa
+        val capGradient = LinearGradient(
+            capLeft, 0f, capRight, 0f,
+            intArrayOf(
+                Color.parseColor("#2E7D32"),
+                Color.parseColor("#4CAF50"),
+                Color.parseColor("#66BB6A"),
+                Color.parseColor("#4CAF50"),
+                Color.parseColor("#1B5E20")
+            ),
+            floatArrayOf(0f, 0.2f, 0.4f, 0.7f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        pipePaint.shader = capGradient
+        canvas.drawRoundRect(capLeft, capTop, capRight, capBottom, cornerRadius, cornerRadius, pipePaint)
+        pipePaint.shader = null
+
+        // Borde de la tapa
+        pipeStrokePaint.color = Color.parseColor("#1B5E20")
+        pipeStrokePaint.strokeWidth = 2.5f
+        canvas.drawRoundRect(capLeft, capTop, capRight, capBottom, cornerRadius, cornerRadius, pipeStrokePaint)
+
+        // Brillo de la tapa
+        canvas.drawRoundRect(
+            capLeft + (capRight - capLeft) * 0.15f, capTop + 2f,
+            capLeft + (capRight - capLeft) * 0.35f, capBottom - 2f,
+            cornerRadius * 0.5f, cornerRadius * 0.5f, highlightPaint
+        )
+    }
+
+    private fun drawCollectible(canvas: Canvas, c: Collectible) {
+        if (c.collected) return
+
+        val pulse = 1f + sin(c.animationPhase) * 0.15f
+        val radius = c.radius * pulse
+
+        val glowGradient = RadialGradient(
+            c.x, c.y, radius * 2.5f,
+            intArrayOf(Color.argb(80, 0, 229, 255), Color.argb(0, 0, 229, 255)),
+            null, Shader.TileMode.CLAMP
+        )
+        collectibleGlowPaint.shader = glowGradient
+        canvas.drawCircle(c.x, c.y, radius * 2.5f, collectibleGlowPaint)
+        collectibleGlowPaint.shader = null
+
+        val gradient = RadialGradient(
+            c.x - radius * 0.3f, c.y - radius * 0.3f, radius * 1.2f,
+            collectibleCyan, collectiblePurple, Shader.TileMode.CLAMP
+        )
+        collectiblePaint.shader = gradient
+        canvas.drawCircle(c.x, c.y, radius, collectiblePaint)
+        collectiblePaint.shader = null
+
+        val starPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(c.x - radius * 0.2f, c.y - radius * 0.2f, radius * 0.2f, starPaint)
     }
 }
-
