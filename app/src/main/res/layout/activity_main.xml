@@ -8,89 +8,204 @@
         android:id="@+id/gameView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="@string/cd_game_area"
         android:focusable="true"
         android:focusableInTouchMode="true" />
 
-    <!-- UI Overlay -->
+    <!-- HUD superior: Score + Engranaje -->
     <LinearLayout
+        android:id="@+id/hudTop"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <!-- Score y High Score -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_horizontal">
-
-            <TextView
-                android:id="@+id/scoreText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textColor="@color/text_white"
-                android:textSize="32sp"
-                android:textStyle="bold"
-                android:shadowColor="@color/black"
-                android:shadowDx="2"
-                android:shadowDy="2"
-                android:shadowRadius="4" />
-
-        </LinearLayout>
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp">
 
         <TextView
-            android:id="@+id/highScoreText"
-            android:layout_width="wrap_content"
+            android:id="@+id/scoreText"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:text="@string/high_score"
+            android:layout_weight="1"
+            android:text="0"
             android:textColor="@color/text_white"
-            android:textSize="18sp"
+            android:textSize="36sp"
             android:textStyle="bold"
             android:shadowColor="@color/black"
             android:shadowDx="2"
             android:shadowDy="2"
             android:shadowRadius="4"
-            android:layout_marginTop="8dp" />
+            android:contentDescription="@string/cd_score"
+            android:gravity="center" />
 
-        <!-- Botón de Habilidad -->
-        <LinearLayout
-            android:id="@+id/abilityContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|start"
-            android:orientation="vertical"
-            android:layout_margin="16dp">
+        <ImageButton
+            android:id="@+id/pauseButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_pause"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_pause"
+            android:padding="8dp"
+            android:visibility="gone" />
 
-            <Button
-                android:id="@+id/abilityButton"
-                android:layout_width="140dp"
-                android:layout_height="wrap_content"
-                android:text="@string/ability_button"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:backgroundTint="@color/button_green"
-                android:textColor="@color/text_white"
-                android:padding="12dp"
+        <ImageButton
+            android:id="@+id/settingsButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_settings_gear"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_settings"
+            android:padding="8dp"
+            android:layout_marginEnd="4dp" />
+    </LinearLayout>
+
+    <!-- High Score debajo del HUD -->
+    <TextView
+        android:id="@+id/highScoreText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="56dp"
+        android:layout_marginEnd="16dp"
+        android:text="@string/high_score"
+        android:textColor="@color/text_white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:shadowColor="@color/black"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="3"
+        android:contentDescription="@string/cd_high_score" />
+
+    <!-- Botones de poderes en la parte inferior -->
+    <LinearLayout
+        android:id="@+id/powerUpContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <!-- Invencibilidad -->
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginHorizontal="8dp">
+
+            <com.pajaritosaltador.game.CooldownArcView
+                android:id="@+id/arcInvincibility"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/cd_arc_invincibility" />
+
+            <ImageButton
+                android:id="@+id/btnInvincibility"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:background="@drawable/power_button_bg"
+                android:src="@drawable/ic_shield"
+                android:padding="10dp"
+                android:contentDescription="@string/cd_power_invincibility"
+                android:minWidth="48dp"
                 android:minHeight="48dp" />
 
             <TextView
-                android:id="@+id/abilityCooldownText"
+                android:id="@+id/txtCdInvincibility"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
+                android:layout_gravity="bottom|center_horizontal"
                 android:textColor="@color/text_white"
-                android:textSize="14sp"
-                android:visibility="gone"
-                android:layout_marginTop="4dp" />
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:shadowColor="@color/black"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:visibility="gone" />
+        </FrameLayout>
 
-        </LinearLayout>
+        <!-- Modo X2 -->
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginHorizontal="8dp">
 
+            <com.pajaritosaltador.game.CooldownArcView
+                android:id="@+id/arcSpeedX2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/cd_arc_speed" />
+
+            <ImageButton
+                android:id="@+id/btnSpeedX2"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:background="@drawable/power_button_bg"
+                android:src="@drawable/ic_speed"
+                android:padding="10dp"
+                android:contentDescription="@string/cd_power_speed"
+                android:minWidth="48dp"
+                android:minHeight="48dp" />
+
+            <TextView
+                android:id="@+id/txtCdSpeedX2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal"
+                android:textColor="@color/text_white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:shadowColor="@color/black"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <!-- Romper Tuberia -->
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginHorizontal="8dp">
+
+            <com.pajaritosaltador.game.CooldownArcView
+                android:id="@+id/arcBreakPipe"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/cd_arc_break" />
+
+            <ImageButton
+                android:id="@+id/btnBreakPipe"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:background="@drawable/power_button_bg"
+                android:src="@drawable/ic_break"
+                android:padding="10dp"
+                android:contentDescription="@string/cd_power_break"
+                android:minWidth="48dp"
+                android:minHeight="48dp" />
+
+            <TextView
+                android:id="@+id/txtCdBreakPipe"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal"
+                android:textColor="@color/text_white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:shadowColor="@color/black"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 
-    <!-- Start Screen -->
+    <!-- Pantalla de Inicio -->
     <LinearLayout
         android:id="@+id/startScreen"
         android:layout_width="match_parent"
@@ -105,28 +220,38 @@
             android:layout_height="wrap_content"
             android:text="@string/app_name"
             android:textColor="@color/text_white"
-            android:textSize="48sp"
+            android:textSize="44sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@string/app_name" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/tap_to_jump"
             android:textColor="@color/text_white"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:gravity="center"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="6dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/avoid_pipes"
             android:textColor="@color/text_white"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:gravity="center"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/collect_items_hint"
+            android:textColor="#80DEEA"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:layout_marginBottom="28dp" />
 
         <Button
             android:id="@+id/startButton"
@@ -138,11 +263,64 @@
             android:backgroundTint="@color/button_green"
             android:textColor="@color/text_white"
             android:padding="16dp"
-            android:minWidth="200dp" />
-
+            android:minWidth="200dp"
+            android:minHeight="48dp"
+            android:contentDescription="@string/cd_start_button" />
     </LinearLayout>
 
-    <!-- Game Over Screen -->
+    <!-- Pantalla de Pausa -->
+    <LinearLayout
+        android:id="@+id/pauseScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@color/overlay_dark"
+        android:padding="32dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/paused_title"
+            android:textColor="@color/text_white"
+            android:textSize="44sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="32dp" />
+
+        <Button
+            android:id="@+id/resumeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/resume_game"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/button_green"
+            android:textColor="@color/text_white"
+            android:padding="16dp"
+            android:minWidth="200dp"
+            android:minHeight="48dp"
+            android:contentDescription="@string/cd_resume_button"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/quitButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/quit_game"
+            android:textSize="18sp"
+            android:backgroundTint="#78909C"
+            android:textColor="@color/text_white"
+            android:padding="14dp"
+            android:minWidth="200dp"
+            android:minHeight="48dp"
+            android:contentDescription="@string/cd_quit_button" />
+    </LinearLayout>
+
+    <!-- Pantalla de Game Over -->
     <LinearLayout
         android:id="@+id/gameOverScreen"
         android:layout_width="match_parent"
@@ -160,10 +338,10 @@
             android:layout_height="wrap_content"
             android:text="@string/game_over"
             android:textColor="@color/text_white"
-            android:textSize="48sp"
+            android:textSize="44sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="20dp" />
 
         <TextView
             android:id="@+id/finalScoreText"
@@ -171,10 +349,11 @@
             android:layout_height="wrap_content"
             android:text="@string/score"
             android:textColor="@color/text_white"
-            android:textSize="36sp"
+            android:textSize="32sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginBottom="28dp"
+            android:contentDescription="@string/cd_final_score" />
 
         <Button
             android:id="@+id/restartButton"
@@ -186,9 +365,9 @@
             android:backgroundTint="@color/button_green"
             android:textColor="@color/text_white"
             android:padding="16dp"
-            android:minWidth="200dp" />
-
+            android:minWidth="200dp"
+            android:minHeight="48dp"
+            android:contentDescription="@string/cd_restart_button" />
     </LinearLayout>
 
 </FrameLayout>
-

@@ -7,7 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
+
     <!-- Colores del juego -->
     <color name="sky_blue_light">#87CEEB</color>
     <color name="sky_blue_medium">#98D8E8</color>
@@ -21,5 +21,10 @@
     <color name="button_green">#4CAF50</color>
     <color name="text_white">#FFFFFF</color>
     <color name="overlay_dark">#B3000000</color>
-</resources>
 
+    <!-- Colores de poderes -->
+    <color name="power_invincibility">#FFD700</color>
+    <color name="power_speed">#FF6D00</color>
+    <color name="power_break">#F44336</color>
+    <color name="collectible_cyan">#00E5FF</color>
+</resources>

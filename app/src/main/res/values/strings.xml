@@ -3,13 +3,48 @@
     <string name="app_name">Pajarito Saltador</string>
     <string name="start_game">Comenzar</string>
     <string name="restart_game">Jugar de Nuevo</string>
-    <string name="game_over">¡Game Over!</string>
-    <string name="score">Puntuación: %d</string>
-    <string name="high_score">Récord: %d</string>
+    <string name="game_over">Game Over</string>
+    <string name="score">Puntuacion: %d</string>
+    <string name="high_score">Record: %d</string>
     <string name="tap_to_jump">Toca para saltar</string>
     <string name="avoid_pipes">Evita los tubos</string>
+    <string name="collect_items_hint">Recoge items para reducir cooldowns</string>
+
+    <!-- Poderes -->
     <string name="ability_button">Escudo</string>
     <string name="ability_active">Escudo Activo</string>
     <string name="ability_cooldown">En Cooldown</string>
-</resources>
 
+    <!-- Ajustes -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_music">Musica</string>
+    <string name="settings_sfx">Efectos de sonido</string>
+    <string name="settings_ok">Aceptar</string>
+
+    <!-- Pausa -->
+    <string name="paused_title">Pausa</string>
+    <string name="resume_game">Reanudar</string>
+    <string name="quit_game">Salir al Menu</string>
+
+    <!-- Content Descriptions para accesibilidad -->
+    <string name="cd_game_area">Area de juego</string>
+    <string name="cd_score">Puntuacion actual</string>
+    <string name="cd_high_score">Record de puntuacion</string>
+    <string name="cd_final_score">Puntuacion final</string>
+    <string name="cd_settings">Abrir ajustes</string>
+    <string name="cd_start_button">Comenzar partida</string>
+    <string name="cd_restart_button">Reiniciar partida</string>
+    <string name="cd_power_invincibility">Activar invencibilidad</string>
+    <string name="cd_power_speed">Activar modo velocidad doble</string>
+    <string name="cd_power_break">Romper tuberia mas cercana</string>
+    <string name="cd_arc_invincibility">Progreso de cooldown de invencibilidad</string>
+    <string name="cd_arc_speed">Progreso de cooldown de velocidad</string>
+    <string name="cd_arc_break">Progreso de cooldown de romper tuberia</string>
+    <string name="cd_settings_music">Opcion de musica</string>
+    <string name="cd_settings_sfx">Opcion de efectos de sonido</string>
+    <string name="cd_switch_music">Activar o desactivar musica</string>
+    <string name="cd_switch_sfx">Activar o desactivar efectos de sonido</string>
+    <string name="cd_pause">Pausar partida</string>
+    <string name="cd_resume_button">Reanudar partida</string>
+    <string name="cd_quit_button">Salir al menu principal</string>
+</resources>

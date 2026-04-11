@@ -7,5 +7,9 @@
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowNoTitle">true</item>
     </style>
-</resources>
 
+    <style name="SettingsDialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/button_green</item>
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

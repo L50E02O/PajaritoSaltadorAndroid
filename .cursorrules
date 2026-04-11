@@ -1,0 +1,9 @@
+Arquitectura: Utiliza MVVM y un SurfaceView o un Canvas personalizado para el renderizado del juego.
+
+Gestión de Estado: Define un sistema de "PowerUpManager" para controlar los temporizadores de cooldown (CDR) y las duraciones de los efectos de forma independiente.
+
+Persistencia: Usa DataStore o SharedPreferences para el puntaje local, asegurando que sea asíncrono.
+
+Responsividad: Todos los cálculos de posiciones y colisiones deben basarse en porcentajes del ancho/alto de la pantalla (canvas.width, canvas.height) en lugar de valores fijos en píxeles.
+
+Comentarios y commits sin emogis y en espanol
