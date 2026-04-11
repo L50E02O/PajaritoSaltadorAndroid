@@ -1,5 +1,6 @@
-# Built application files
+# Built application files (APK de distribucion versionada en releases/)
 *.apk
+!releases/*.apk
 *.ap_
 *.aab
 
@@ -49,6 +50,7 @@ captures/
 # Keystore files (IMPORTANTE: No subir keystores)
 *.jks
 *.keystore
+keystore.properties
 
 # External native build folder
 .externalNativeBuild
