@@ -63,7 +63,7 @@ class GameLogic(
 
     // Multiplicador de velocidad (modo rapido, antes x2)
     val speedMultiplier: Float
-        get() = if (powerUpManager.speedX2.isActive) 1.75f else 1f
+        get() = if (powerUpManager.speedX2.isActive) 1.50f else 1f
 
     /** Tubos que se dibujan cayendo tras romper tuberia (no colisionan). */
     val pipeTumbleAnimations = mutableListOf<PipeTumblePair>()

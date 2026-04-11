@@ -312,7 +312,7 @@ class GameLogicTest {
     // =====================================================================
 
     @Test
-    fun `speedMultiplier - es 1 cuando modo x2 no esta activo`() {
+    fun `speedMultiplier - es 1 cuando modo speed no esta activo`() {
         assertEquals(
             "El multiplicador debe ser 1.0 por defecto",
             1f, game.speedMultiplier
@@ -320,13 +320,13 @@ class GameLogicTest {
     }
 
     @Test
-    fun `speedMultiplier - es 1_75 cuando modo rapido esta activo`() {
+    fun `speedMultiplier - es 1_50 cuando modo rapido esta activo`() {
         game.startGame()
         game.activateSpeedX2()
 
         assertEquals(
-            "El multiplicador debe ser 1.75 con modo rapido activo",
-            1.75f, game.speedMultiplier
+            "El multiplicador debe ser 1.50 con modo rapido activo",
+            1.50, game.speedMultiplier
         )
     }
 
