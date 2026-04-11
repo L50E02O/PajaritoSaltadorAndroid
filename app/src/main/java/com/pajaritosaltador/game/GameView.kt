@@ -55,6 +55,36 @@ class GameView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
+    // Paints cacheados para evitar allocations en el game loop
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(40, 0, 0, 0)
+        style = Paint.Style.FILL
+    }
+    private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(70, 255, 255, 255)
+        style = Paint.Style.FILL
+    }
+    private val x2GlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(60, 255, 100, 0)
+        style = Paint.Style.FILL
+    }
+    private val deathRedPaint = Paint().apply { color = Color.argb(76, 255, 0, 0) }
+    private val eyeStrokePaint = Paint().apply {
+        color = Color.BLACK
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
+    private val starPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+    }
+    private val beakPath = Path()
+    private val wingRect = RectF()
+
+    // Gradiente de fondo cacheado (se recrea solo si cambia el viewport)
+    private var cachedBgGradient: LinearGradient? = null
+    private var cachedViewportH = 0f
+
     // Colores
     private val skyTop = Color.parseColor("#87CEEB")
     private val skyBottom = Color.parseColor("#E0F7FA")
@@ -214,7 +244,7 @@ class GameView @JvmOverloads constructor(
                 try {
                     gameLogic.update(deltaTime, shouldJump)
                     frameCount++
-                    if (frameCount % 3 == 0) {
+                    if (frameCount % 6 == 0) {
                         uiHandler.post { onPowerUpStateChanged?.invoke() }
                     }
                 } catch (e: Exception) {
@@ -260,8 +290,14 @@ class GameView @JvmOverloads constructor(
         drawBackground(canvas)
         drawGround(canvas)
 
-        gameLogic.pipes.forEach { drawPipe(canvas, it) }
-        gameLogic.collectibles.forEach { drawCollectible(canvas, it) }
+        val pipes = gameLogic.pipes
+        for (i in pipes.indices) {
+            drawPipe(canvas, pipes[i])
+        }
+        val collectibles = gameLogic.collectibles
+        for (i in collectibles.indices) {
+            drawCollectible(canvas, collectibles[i])
+        }
         drawBird(canvas)
 
         if (gameLogic.powerUpManager.speedX2.isActive) {
@@ -272,16 +308,20 @@ class GameView @JvmOverloads constructor(
     }
 
     private fun drawBackground(canvas: Canvas) {
-        val gradient = LinearGradient(
-            0f, 0f, 0f, viewportHeight * 0.85f,
-            skyTop, skyBottom, Shader.TileMode.CLAMP
-        )
-        bgPaint.shader = gradient
+        if (cachedBgGradient == null || cachedViewportH != viewportHeight) {
+            cachedBgGradient = LinearGradient(
+                0f, 0f, 0f, viewportHeight * 0.85f,
+                skyTop, skyBottom, Shader.TileMode.CLAMP
+            )
+            cachedViewportH = viewportHeight
+        }
+        bgPaint.shader = cachedBgGradient
         canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, bgPaint)
         bgPaint.shader = null
 
         val scrollOffset = gameLogic.backgroundScrollX
-        clouds.forEach { cloud ->
+        for (i in clouds.indices) {
+            val cloud = clouds[i]
             val cx = ((cloud.baseX * viewportWidth - scrollOffset * cloud.scale * 0.5f) % (viewportWidth + 80f) + viewportWidth + 80f) % (viewportWidth + 80f) - 40f
             drawCloud(canvas, cx, cloud.y * viewportHeight, cloud.scale)
         }
@@ -334,18 +374,13 @@ class GameView @JvmOverloads constructor(
         }
 
         if (isX2) {
-            val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(60, 255, 100, 0)
-                style = Paint.Style.FILL
-            }
-            canvas.drawCircle(0f, 0f, bodyRadius + bird.width * 0.2f, glowPaint)
+            canvas.drawCircle(0f, 0f, bodyRadius + bird.width * 0.2f, x2GlowPaint)
         }
 
         if (gameLogic.birdIsDying) {
             val blinkPhase = ((gameLogic.birdDeathAnimationTime * 10).toInt() % 2)
             if (blinkPhase == 0) {
-                val redPaint = Paint().apply { color = Color.argb(76, 255, 0, 0) }
-                canvas.drawCircle(0f, 0f, bodyRadius + 4f, redPaint)
+                canvas.drawCircle(0f, 0f, bodyRadius + 4f, deathRedPaint)
             }
         }
 
@@ -359,46 +394,52 @@ class GameView @JvmOverloads constructor(
             birdPaint.color = Color.BLACK
             canvas.drawCircle(bodyRadius * 0.42f, -bodyRadius * 0.22f, bodyRadius * 0.14f, birdPaint)
         } else {
-            val eyePaint = Paint().apply {
-                color = Color.BLACK
-                style = Paint.Style.STROKE
-                strokeWidth = 2f
-            }
             canvas.drawLine(-bodyRadius * 0.1f, -bodyRadius * 0.25f,
-                bodyRadius * 0.4f, -bodyRadius * 0.25f, eyePaint)
+                bodyRadius * 0.4f, -bodyRadius * 0.25f, eyeStrokePaint)
         }
 
-        val beakColor = if (gameLogic.birdIsDying) Color.parseColor("#CC6600") else birdOrange
-        birdPaint.color = beakColor
-        val beakPath = Path().apply {
-            moveTo(bodyRadius, 0f)
-            lineTo(bodyRadius + bird.width * 0.2f, -bodyRadius * 0.25f)
-            lineTo(bodyRadius + bird.width * 0.2f, bodyRadius * 0.25f)
-            close()
-        }
+        birdPaint.color = if (gameLogic.birdIsDying) Color.parseColor("#CC6600") else birdOrange
+        beakPath.rewind()
+        beakPath.moveTo(bodyRadius, 0f)
+        beakPath.lineTo(bodyRadius + bird.width * 0.2f, -bodyRadius * 0.25f)
+        beakPath.lineTo(bodyRadius + bird.width * 0.2f, bodyRadius * 0.25f)
+        beakPath.close()
         canvas.drawPath(beakPath, birdPaint)
 
+        wingRect.set(-bodyRadius * 0.6f, -bodyRadius * 0.35f, bodyRadius * 0.6f, bodyRadius * 0.35f)
         if (!gameLogic.birdIsDying && gameLogic.birdWingPhase > 0) {
             val wingAngle = sin(gameLogic.birdWingPhase) * 0.5f
             canvas.save()
             canvas.translate(-bodyRadius * 0.3f, bodyRadius * 0.4f)
             canvas.rotate(Math.toDegrees((-0.3 + wingAngle).toDouble()).toFloat())
             birdPaint.color = birdOrange
-            canvas.drawOval(RectF(-bodyRadius * 0.6f, -bodyRadius * 0.35f,
-                bodyRadius * 0.6f, bodyRadius * 0.35f), birdPaint)
+            canvas.drawOval(wingRect, birdPaint)
             canvas.restore()
         } else if (gameLogic.birdIsDying) {
             canvas.save()
             canvas.translate(-bodyRadius * 0.3f, bodyRadius * 0.4f)
             canvas.rotate(28.6f)
             birdPaint.color = Color.parseColor("#CC8800")
-            canvas.drawOval(RectF(-bodyRadius * 0.6f, -bodyRadius * 0.35f,
-                bodyRadius * 0.6f, bodyRadius * 0.35f), birdPaint)
+            canvas.drawOval(wingRect, birdPaint)
             canvas.restore()
         }
 
         canvas.restore()
     }
+
+    // Colores cacheados para tubos (evitar Color.parseColor cada frame)
+    private val pipeBodyColors = intArrayOf(
+        Color.parseColor("#3DA542"), Color.parseColor("#5BBF3E"),
+        Color.parseColor("#74D44E"), Color.parseColor("#5BBF3E"),
+        Color.parseColor("#2D8B34")
+    )
+    private val pipeCapColors = intArrayOf(
+        Color.parseColor("#2E7D32"), Color.parseColor("#4CAF50"),
+        Color.parseColor("#66BB6A"), Color.parseColor("#4CAF50"),
+        Color.parseColor("#1B5E20")
+    )
+    private val pipeGradientStops = floatArrayOf(0f, 0.2f, 0.4f, 0.7f, 1f)
+    private val pipeBorderColor = Color.parseColor("#1B5E20")
 
     private fun drawPipe(canvas: Canvas, pipe: Pipe) {
         if (pipe.x + pipe.width < -20f || pipe.x > viewportWidth + 20f) return
@@ -408,46 +449,24 @@ class GameView @JvmOverloads constructor(
         val cornerRadius = pipe.width * 0.06f
         val isTopPipe = pipe.y == 0f
 
-        // Sombra del cuerpo
-        val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(40, 0, 0, 0)
-            style = Paint.Style.FILL
-        }
         canvas.drawRect(pipe.x + 3f, pipe.y, pipe.x + pipe.width + 3f, pipe.y + pipe.height, shadowPaint)
 
-        // Cuerpo con gradiente horizontal (claro a oscuro, simula cilindro)
-        val bodyGradient = LinearGradient(
+        pipePaint.shader = LinearGradient(
             pipe.x, 0f, pipe.x + pipe.width, 0f,
-            intArrayOf(
-                Color.parseColor("#3DA542"),
-                Color.parseColor("#5BBF3E"),
-                Color.parseColor("#74D44E"),
-                Color.parseColor("#5BBF3E"),
-                Color.parseColor("#2D8B34")
-            ),
-            floatArrayOf(0f, 0.2f, 0.4f, 0.7f, 1f),
-            Shader.TileMode.CLAMP
+            pipeBodyColors, pipeGradientStops, Shader.TileMode.CLAMP
         )
-        pipePaint.shader = bodyGradient
         canvas.drawRect(pipe.x, pipe.y, pipe.x + pipe.width, pipe.y + pipe.height, pipePaint)
         pipePaint.shader = null
 
-        // Borde oscuro del cuerpo
-        pipeStrokePaint.color = Color.parseColor("#1B5E20")
+        pipeStrokePaint.color = pipeBorderColor
         pipeStrokePaint.strokeWidth = 2f
         canvas.drawRect(pipe.x, pipe.y, pipe.x + pipe.width, pipe.y + pipe.height, pipeStrokePaint)
 
-        // Franja de brillo especular (reflejo vertical)
-        val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(70, 255, 255, 255)
-            style = Paint.Style.FILL
-        }
         canvas.drawRect(
             pipe.x + pipe.width * 0.2f, pipe.y,
             pipe.x + pipe.width * 0.35f, pipe.y + pipe.height, highlightPaint
         )
 
-        // Tapa (cap) con gradiente y bordes redondeados
         val capLeft = pipe.x - capOverhang
         val capRight = pipe.x + pipe.width + capOverhang
         val capTop: Float
@@ -461,35 +480,22 @@ class GameView @JvmOverloads constructor(
             capBottom = pipe.y + capHeight
         }
 
-        // Sombra de la tapa
         canvas.drawRoundRect(
             capLeft + 3f, capTop + 2f, capRight + 3f, capBottom + 2f,
             cornerRadius, cornerRadius, shadowPaint
         )
 
-        // Gradiente de la tapa
-        val capGradient = LinearGradient(
+        pipePaint.shader = LinearGradient(
             capLeft, 0f, capRight, 0f,
-            intArrayOf(
-                Color.parseColor("#2E7D32"),
-                Color.parseColor("#4CAF50"),
-                Color.parseColor("#66BB6A"),
-                Color.parseColor("#4CAF50"),
-                Color.parseColor("#1B5E20")
-            ),
-            floatArrayOf(0f, 0.2f, 0.4f, 0.7f, 1f),
-            Shader.TileMode.CLAMP
+            pipeCapColors, pipeGradientStops, Shader.TileMode.CLAMP
         )
-        pipePaint.shader = capGradient
         canvas.drawRoundRect(capLeft, capTop, capRight, capBottom, cornerRadius, cornerRadius, pipePaint)
         pipePaint.shader = null
 
-        // Borde de la tapa
-        pipeStrokePaint.color = Color.parseColor("#1B5E20")
+        pipeStrokePaint.color = pipeBorderColor
         pipeStrokePaint.strokeWidth = 2.5f
         canvas.drawRoundRect(capLeft, capTop, capRight, capBottom, cornerRadius, cornerRadius, pipeStrokePaint)
 
-        // Brillo de la tapa
         canvas.drawRoundRect(
             capLeft + (capRight - capLeft) * 0.15f, capTop + 2f,
             capLeft + (capRight - capLeft) * 0.35f, capBottom - 2f,
@@ -520,10 +526,6 @@ class GameView @JvmOverloads constructor(
         canvas.drawCircle(c.x, c.y, radius, collectiblePaint)
         collectiblePaint.shader = null
 
-        val starPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = Paint.Style.FILL
-        }
         canvas.drawCircle(c.x - radius * 0.2f, c.y - radius * 0.2f, radius * 0.2f, starPaint)
     }
 }

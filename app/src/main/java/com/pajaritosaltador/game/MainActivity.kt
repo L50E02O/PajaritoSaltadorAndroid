@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity() {
             powerUpContainer.visibility = View.GONE
             pauseButton.visibility = View.GONE
             viewModel.updateGameState(GameLogic.GameState.GAME_OVER)
+            musicService?.pauseMusic()
         }
 
         gameView.onGameStart = {
@@ -138,6 +139,9 @@ class MainActivity : AppCompatActivity() {
             scoreText.text = "0"
             viewModel.updateGameState(GameLogic.GameState.PLAYING)
             updateAllPowerUpUI()
+            if (viewModel.musicEnabled.value == true) {
+                musicService?.restart()
+            }
         }
 
         gameView.onPowerUpStateChanged = {
@@ -149,10 +153,14 @@ class MainActivity : AppCompatActivity() {
                 pauseScreen.visibility = View.VISIBLE
                 powerUpContainer.visibility = View.GONE
                 viewModel.updateGameState(GameLogic.GameState.PAUSED)
+                musicService?.pauseMusic()
             } else {
                 pauseScreen.visibility = View.GONE
                 powerUpContainer.visibility = View.VISIBLE
                 viewModel.updateGameState(GameLogic.GameState.PLAYING)
+                if (viewModel.musicEnabled.value == true) {
+                    musicService?.play()
+                }
             }
         }
     }
@@ -182,6 +190,7 @@ class MainActivity : AppCompatActivity() {
             powerUpContainer.visibility = View.GONE
             startScreen.visibility = View.VISIBLE
             viewModel.updateGameState(GameLogic.GameState.START)
+            musicService?.pauseMusic()
         }
     }
 
@@ -266,13 +275,17 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         gameView.resume()
-        if (viewModel.musicEnabled.value == true) {
+        val state = gameView.gameLogic.state
+        if (viewModel.musicEnabled.value == true && state == GameLogic.GameState.PLAYING) {
             musicService?.play()
         }
     }
 
     override fun onPause() {
         super.onPause()
+        if (gameView.gameLogic.state == GameLogic.GameState.PLAYING) {
+            gameView.pauseGame()
+        }
         gameView.pause()
         musicService?.pauseMusic()
     }

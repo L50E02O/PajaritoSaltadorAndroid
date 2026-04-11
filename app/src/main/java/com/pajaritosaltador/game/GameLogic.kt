@@ -1,7 +1,5 @@
 package com.pajaritosaltador.game
 
-import kotlin.math.abs
-
 /**
  * Logica principal del juego.
  * Gestiona el estado, pajaro, tuberias, coleccionables y poderes.
@@ -120,14 +118,13 @@ class GameLogic(
      */
     fun update(deltaTime: Float, shouldJump: Boolean) {
         if (state != GameState.PLAYING) return
-        if (state == GameState.PAUSED) return
 
         val effectiveDelta = deltaTime * speedMultiplier
 
         updateBird(deltaTime, shouldJump)
         updatePipes(effectiveDelta)
         updateCollectibles(effectiveDelta)
-        powerUpManager.update(deltaTime)
+        powerUpManager.update(effectiveDelta)
         checkCollisions()
 
         backgroundScrollX += pipeSpeed * effectiveDelta * 0.3f
@@ -189,8 +186,9 @@ class GameLogic(
      * Actualiza posicion de tuberias y genera nuevas
      */
     private fun updatePipes(effectiveDelta: Float) {
-        pipes.forEach { pipe ->
-            pipe.x -= pipeSpeed * effectiveDelta
+        val speed = pipeSpeed * effectiveDelta
+        for (i in pipes.indices) {
+            pipes[i].x -= speed
         }
 
         pipes.removeAll { it.x + pipeWidth < -50f }
@@ -201,13 +199,19 @@ class GameLogic(
             pipeSpawnTimer = 0f
         }
 
-        pipes.forEach { pipe ->
+        for (i in pipes.indices) {
+            val pipe = pipes[i]
             if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
                 pipe.passed = true
-                val pairPipe = pipes.find {
-                    it != pipe && it.pairId == pipe.pairId
+                var pairPassed = false
+                for (j in pipes.indices) {
+                    val other = pipes[j]
+                    if (j != i && other.pairId == pipe.pairId && other.passed) {
+                        pairPassed = true
+                        break
+                    }
                 }
-                if (pairPipe != null && pairPipe.passed) {
+                if (pairPassed) {
                     score++
                     onScoreChanged?.invoke(score)
 
@@ -264,8 +268,10 @@ class GameLogic(
      * Actualiza posicion y animacion de coleccionables
      */
     private fun updateCollectibles(effectiveDelta: Float) {
-        collectibles.forEach { c ->
-            c.x -= pipeSpeed * effectiveDelta
+        val speed = pipeSpeed * effectiveDelta
+        for (i in collectibles.indices) {
+            val c = collectibles[i]
+            c.x -= speed
             c.animationPhase += effectiveDelta * 4f
         }
         collectibles.removeAll { it.collected || it.x < -50f }

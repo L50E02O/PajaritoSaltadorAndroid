@@ -63,6 +63,20 @@ class MusicService : Service() {
     }
 
     /**
+     * Reinicia la reproduccion desde el inicio
+     */
+    fun restart() {
+        try {
+            if (isPrepared) {
+                mediaPlayer?.seekTo(0)
+                mediaPlayer?.start()
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicService", "Error al reiniciar", e)
+        }
+    }
+
+    /**
      * Ajusta el volumen (0.0 a 1.0)
      */
     fun setVolume(volume: Float) {
@@ -70,6 +84,17 @@ class MusicService : Service() {
         try {
             mediaPlayer?.setVolume(v, v)
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Indica si la musica esta sonando actualmente
+     */
+    fun isPlaying(): Boolean {
+        return try {
+            mediaPlayer?.isPlaying == true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     override fun onDestroy() {
