@@ -61,9 +61,12 @@ class GameLogic(
     // Sistema de poderes
     val powerUpManager = PowerUpManager()
 
-    // Multiplicador de velocidad (para Modo X2)
+    // Multiplicador de velocidad (modo rapido, antes x2)
     val speedMultiplier: Float
-        get() = if (powerUpManager.speedX2.isActive) 2f else 1f
+        get() = if (powerUpManager.speedX2.isActive) 1.75f else 1f
+
+    /** Tubos que se dibujan cayendo tras romper tuberia (no colisionan). */
+    val pipeTumbleAnimations = mutableListOf<PipeTumblePair>()
 
     // Scroll del fondo
     var backgroundScrollX = 0f
@@ -98,6 +101,7 @@ class GameLogic(
 
         pipes.clear()
         collectibles.clear()
+        pipeTumbleAnimations.clear()
 
         gravity = baseGravity
         jumpForce = baseJumpForce
@@ -117,6 +121,7 @@ class GameLogic(
      * Actualiza el juego un frame
      */
     fun update(deltaTime: Float, shouldJump: Boolean) {
+        updatePipeTumbleAnimations(deltaTime)
         if (state != GameState.PLAYING) return
 
         val effectiveDelta = deltaTime * speedMultiplier
@@ -311,16 +316,69 @@ class GameLogic(
      * Destruye la tuberia (par) mas cercana al frente del pajaro
      */
     fun destroyNearestPipe(): Boolean {
+        val nearest = pipes
+            .filter { it.x + it.width > bird.x }
+            .minByOrNull { it.x } ?: return false
+        val nearestPairId = nearest.pairId
+
         if (!powerUpManager.activate(powerUpManager.breakPipe)) return false
 
-        val nearestPairId = pipes
-            .filter { it.x + it.width > bird.x }
-            .minByOrNull { it.x }
-            ?.pairId ?: return false
+        val pairPipes = pipes.filter { it.pairId == nearestPairId }
+        val top = pairPipes.find { it.y == 0f }
+        val bottom = pairPipes.find { it.y != 0f }
+
+        if (top != null && bottom != null) {
+            val baseVx = -pipeSpeed
+            pipeTumbleAnimations.add(
+                PipeTumblePair(
+                    top = PipeTumblePiece(
+                        x = top.x,
+                        y = top.y,
+                        width = top.width,
+                        height = top.height,
+                        isTopPipe = true,
+                        velX = baseVx - viewportWidth * 0.14f,
+                        velY = -viewportHeight * 0.28f,
+                        rotVelDegPerSec = 520f
+                    ),
+                    bottom = PipeTumblePiece(
+                        x = bottom.x,
+                        y = bottom.y,
+                        width = bottom.width,
+                        height = bottom.height,
+                        isTopPipe = false,
+                        velX = baseVx - viewportWidth * 0.11f,
+                        velY = viewportHeight * 0.18f,
+                        rotVelDegPerSec = -460f
+                    )
+                )
+            )
+        }
 
         pipes.removeAll { it.pairId == nearestPairId }
         onPipeDestroyed?.invoke()
         return true
+    }
+
+    private fun updatePipeTumbleAnimations(deltaTime: Float) {
+        if (pipeTumbleAnimations.isEmpty()) return
+        val gravity = viewportHeight * 2.4f
+        val iter = pipeTumbleAnimations.iterator()
+        while (iter.hasNext()) {
+            val pair = iter.next()
+            pair.age += deltaTime
+            for (piece in arrayOf(pair.top, pair.bottom)) {
+                piece.velY += gravity * deltaTime
+                piece.x += piece.velX * deltaTime
+                piece.y += piece.velY * deltaTime
+                piece.rotationDeg += piece.rotVelDegPerSec * deltaTime
+            }
+            val outOfView = pair.top.x + pair.top.width < -120f ||
+                pair.bottom.x + pair.bottom.width < -120f ||
+                pair.top.y > viewportHeight + 120f ||
+                pair.age > 1.4f
+            if (outOfView) iter.remove()
+        }
     }
 
     /**
@@ -364,6 +422,7 @@ class GameLogic(
         state = GameState.START
         pipes.clear()
         collectibles.clear()
+        pipeTumbleAnimations.clear()
         powerUpManager.reset()
     }
 

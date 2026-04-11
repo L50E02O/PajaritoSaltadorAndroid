@@ -35,7 +35,7 @@
     <string name="cd_start_button">Comenzar partida</string>
     <string name="cd_restart_button">Reiniciar partida</string>
     <string name="cd_power_invincibility">Activar invencibilidad</string>
-    <string name="cd_power_speed">Activar modo velocidad doble</string>
+    <string name="cd_power_speed">Activar modo velocidad aumentada (x1.75)</string>
     <string name="cd_power_break">Romper tuberia mas cercana</string>
     <string name="cd_arc_invincibility">Progreso de cooldown de invencibilidad</string>
     <string name="cd_arc_speed">Progreso de cooldown de velocidad</string>

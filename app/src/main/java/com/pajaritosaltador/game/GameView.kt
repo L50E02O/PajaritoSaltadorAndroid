@@ -30,13 +30,11 @@ class GameView @JvmOverloads constructor(
     lateinit var gameLogic: GameLogic
         private set
 
+    /** MVVM: sincroniza posiciones de tuberias para observadores; el dibujo usa esta fuente si existe. */
+    private var pipeViewModel: PipeViewModel? = null
+
     // Paints reutilizables
     private val birdPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val pipePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val pipeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 3f
-    }
     private val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shieldStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -90,10 +88,6 @@ class GameView @JvmOverloads constructor(
     private val skyBottom = Color.parseColor("#E0F7FA")
     private val birdYellow = Color.parseColor("#FFD700")
     private val birdOrange = Color.parseColor("#FF8C00")
-    private val pipeGreen = Color.parseColor("#228B22")
-    private val pipeGreenDark = Color.parseColor("#006400")
-    private val pipeGreenLight = Color.parseColor("#32CD32")
-    private val pipeCap = Color.parseColor("#2E7D32")
     private val shieldGold = Color.parseColor("#FFD700")
     private val collectibleCyan = Color.parseColor("#00E5FF")
     private val collectiblePurple = Color.parseColor("#AA00FF")
@@ -186,6 +180,10 @@ class GameView @JvmOverloads constructor(
         gameLogic.resumeGame()
     }
 
+    fun attachPipeViewModel(vm: PipeViewModel) {
+        pipeViewModel = vm
+    }
+
     override fun surfaceCreated(holder: SurfaceHolder) { resume() }
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, w: Int, h: Int) {}
     override fun surfaceDestroyed(holder: SurfaceHolder) { pause() }
@@ -275,7 +273,9 @@ class GameView @JvmOverloads constructor(
         val screenH = height.toFloat()
         val scaleX = screenW / viewportWidth
         val scaleY = screenH / viewportHeight
-        val scale = min(scaleX, scaleY)
+        // max: rellena toda la pantalla (sin bandas). El tubo superior (y=0) llega al borde superior.
+        // min: letterbox; deja franjas y el juego no ocupa el alto completo.
+        val scale = max(scaleX, scaleY)
 
         val scaledW = viewportWidth * scale
         val scaledH = viewportHeight * scale
@@ -290,9 +290,25 @@ class GameView @JvmOverloads constructor(
         drawBackground(canvas)
         drawGround(canvas)
 
-        val pipes = gameLogic.pipes
-        for (i in pipes.indices) {
-            drawPipe(canvas, pipes[i])
+        val strokeViewport = 2f * context.resources.displayMetrics.density / scale
+
+        pipeViewModel?.syncFromGameLogic(gameLogic.pipes)
+        val vmPipes = pipeViewModel?.pipes?.value
+        if (vmPipes != null) {
+            for (i in vmPipes.indices) {
+                RetroPipeDrawer.draw(canvas, vmPipes[i], strokeViewport, viewportWidth)
+            }
+        } else {
+            val pipes = gameLogic.pipes
+            for (i in pipes.indices) {
+                RetroPipeDrawer.draw(canvas, pipes[i], strokeViewport, viewportWidth)
+            }
+        }
+        val tumbles = gameLogic.pipeTumbleAnimations
+        for (i in tumbles.indices) {
+            val pair = tumbles[i]
+            RetroPipeDrawer.drawTumblePiece(canvas, pair.top, strokeViewport, viewportWidth)
+            RetroPipeDrawer.drawTumblePiece(canvas, pair.bottom, strokeViewport, viewportWidth)
         }
         val collectibles = gameLogic.collectibles
         for (i in collectibles.indices) {
@@ -425,82 +441,6 @@ class GameView @JvmOverloads constructor(
         }
 
         canvas.restore()
-    }
-
-    // Colores cacheados para tubos (evitar Color.parseColor cada frame)
-    private val pipeBodyColors = intArrayOf(
-        Color.parseColor("#3DA542"), Color.parseColor("#5BBF3E"),
-        Color.parseColor("#74D44E"), Color.parseColor("#5BBF3E"),
-        Color.parseColor("#2D8B34")
-    )
-    private val pipeCapColors = intArrayOf(
-        Color.parseColor("#2E7D32"), Color.parseColor("#4CAF50"),
-        Color.parseColor("#66BB6A"), Color.parseColor("#4CAF50"),
-        Color.parseColor("#1B5E20")
-    )
-    private val pipeGradientStops = floatArrayOf(0f, 0.2f, 0.4f, 0.7f, 1f)
-    private val pipeBorderColor = Color.parseColor("#1B5E20")
-
-    private fun drawPipe(canvas: Canvas, pipe: Pipe) {
-        if (pipe.x + pipe.width < -20f || pipe.x > viewportWidth + 20f) return
-
-        val capHeight = pipe.width * 0.28f
-        val capOverhang = pipe.width * 0.12f
-        val cornerRadius = pipe.width * 0.06f
-        val isTopPipe = pipe.y == 0f
-
-        canvas.drawRect(pipe.x + 3f, pipe.y, pipe.x + pipe.width + 3f, pipe.y + pipe.height, shadowPaint)
-
-        pipePaint.shader = LinearGradient(
-            pipe.x, 0f, pipe.x + pipe.width, 0f,
-            pipeBodyColors, pipeGradientStops, Shader.TileMode.CLAMP
-        )
-        canvas.drawRect(pipe.x, pipe.y, pipe.x + pipe.width, pipe.y + pipe.height, pipePaint)
-        pipePaint.shader = null
-
-        pipeStrokePaint.color = pipeBorderColor
-        pipeStrokePaint.strokeWidth = 2f
-        canvas.drawRect(pipe.x, pipe.y, pipe.x + pipe.width, pipe.y + pipe.height, pipeStrokePaint)
-
-        canvas.drawRect(
-            pipe.x + pipe.width * 0.2f, pipe.y,
-            pipe.x + pipe.width * 0.35f, pipe.y + pipe.height, highlightPaint
-        )
-
-        val capLeft = pipe.x - capOverhang
-        val capRight = pipe.x + pipe.width + capOverhang
-        val capTop: Float
-        val capBottom: Float
-
-        if (isTopPipe) {
-            capTop = pipe.height - capHeight
-            capBottom = pipe.height
-        } else {
-            capTop = pipe.y
-            capBottom = pipe.y + capHeight
-        }
-
-        canvas.drawRoundRect(
-            capLeft + 3f, capTop + 2f, capRight + 3f, capBottom + 2f,
-            cornerRadius, cornerRadius, shadowPaint
-        )
-
-        pipePaint.shader = LinearGradient(
-            capLeft, 0f, capRight, 0f,
-            pipeCapColors, pipeGradientStops, Shader.TileMode.CLAMP
-        )
-        canvas.drawRoundRect(capLeft, capTop, capRight, capBottom, cornerRadius, cornerRadius, pipePaint)
-        pipePaint.shader = null
-
-        pipeStrokePaint.color = pipeBorderColor
-        pipeStrokePaint.strokeWidth = 2.5f
-        canvas.drawRoundRect(capLeft, capTop, capRight, capBottom, cornerRadius, cornerRadius, pipeStrokePaint)
-
-        canvas.drawRoundRect(
-            capLeft + (capRight - capLeft) * 0.15f, capTop + 2f,
-            capLeft + (capRight - capLeft) * 0.35f, capBottom - 2f,
-            cornerRadius * 0.5f, cornerRadius * 0.5f, highlightPaint
-        )
     }
 
     private fun drawCollectible(canvas: Canvas, c: Collectible) {

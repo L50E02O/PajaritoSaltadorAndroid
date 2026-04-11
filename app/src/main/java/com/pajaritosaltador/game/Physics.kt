@@ -62,6 +62,30 @@ data class Pipe(
 )
 
 /**
+ * Segmento de tuberia en animacion de vuelco (fuera de la lista de colision).
+ */
+data class PipeTumblePiece(
+    var x: Float,
+    var y: Float,
+    val width: Float,
+    val height: Float,
+    val isTopPipe: Boolean,
+    var rotationDeg: Float = 0f,
+    var velX: Float,
+    var velY: Float,
+    var rotVelDegPerSec: Float
+)
+
+/**
+ * Par de tuberias que caen y rotan tras usar el poder de romper tuberia.
+ */
+data class PipeTumblePair(
+    val top: PipeTumblePiece,
+    val bottom: PipeTumblePiece,
+    var age: Float = 0f
+)
+
+/**
  * Representa un coleccionable que reduce cooldowns
  */
 data class Collectible(

@@ -126,7 +126,7 @@
                 android:visibility="gone" />
         </FrameLayout>
 
-        <!-- Modo X2 -->
+        <!-- Modo velocidad x1.75 -->
         <FrameLayout
             android:layout_width="72dp"
             android:layout_height="72dp"

@@ -13,7 +13,7 @@ class PowerUpManager {
     )
 
     val speedX2 = PowerUp(
-        name = "Modo X2",
+        name = "Modo x1.75",
         duration = 30000L,
         cooldown = 25000L
     )

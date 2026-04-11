@@ -19,6 +19,7 @@ import androidx.lifecycle.ViewModelProvider
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: GameViewModel
+    private lateinit var pipeViewModel: PipeViewModel
     private lateinit var gameView: GameView
 
     private lateinit var startScreen: LinearLayout
@@ -71,8 +72,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         viewModel = ViewModelProvider(this)[GameViewModel::class.java]
+        pipeViewModel = ViewModelProvider(this)[PipeViewModel::class.java]
 
         bindViews()
+        gameView.attachPipeViewModel(pipeViewModel)
         setupGameView()
         setupButtons()
         observeViewModel()
