@@ -1,48 +1,34 @@
 package com.pajaritosaltador.game
 
 /**
- * Módulo de física del juego
+ * Modulo de fisica del juego
  */
 object Physics {
-    
+
     /**
      * Aplica gravedad a un objeto
      */
-    fun applyGravity(object_: GameObject, gravity: Float, deltaTime: Float) {
-        object_.velocity += gravity * deltaTime
+    fun applyGravity(obj: GameObject, gravity: Float, deltaTime: Float) {
+        obj.velocity += gravity * deltaTime
     }
-    
+
     /**
      * Aplica fuerza de salto
      */
-    fun applyJump(object_: GameObject, jumpForce: Float) {
-        object_.velocity = -jumpForce
+    fun applyJump(obj: GameObject, jumpForce: Float) {
+        obj.velocity = -jumpForce
     }
-    
+
     /**
-     * Limita la velocidad máxima
+     * Limita la velocidad maxima
      */
-    fun clampVelocity(object_: GameObject, maxVelocity: Float) {
-        if (object_.velocity > maxVelocity) {
-            object_.velocity = maxVelocity
-        } else if (object_.velocity < -maxVelocity) {
-            object_.velocity = -maxVelocity
-        }
-    }
-    
-    /**
-     * Verifica si dos rectángulos colisionan (AABB)
-     */
-    fun checkCollision(rect1: Rect, rect2: Rect): Boolean {
-        return rect1.x < rect2.x + rect2.width &&
-               rect1.x + rect1.width > rect2.x &&
-               rect1.y < rect2.y + rect2.height &&
-               rect1.y + rect1.height > rect2.y
+    fun clampVelocity(obj: GameObject, maxVelocity: Float) {
+        obj.velocity = obj.velocity.coerceIn(-maxVelocity, maxVelocity)
     }
 }
 
 /**
- * Clase base para objetos del juego con física
+ * Clase base para objetos del juego con fisica
  */
 data class GameObject(
     var x: Float = 0f,
@@ -54,7 +40,7 @@ data class GameObject(
 )
 
 /**
- * Rectángulo para colisiones
+ * Rectangulo para colisiones
  */
 data class Rect(
     val x: Float,
@@ -63,3 +49,54 @@ data class Rect(
     val height: Float
 )
 
+/**
+ * Representa un tubo
+ */
+data class Pipe(
+    var x: Float,
+    var y: Float,
+    var width: Float,
+    var height: Float,
+    var passed: Boolean,
+    var pairId: Int = 0
+)
+
+/**
+ * Representa un coleccionable que reduce cooldowns
+ */
+data class Collectible(
+    var x: Float,
+    var y: Float,
+    var radius: Float = 12f,
+    var collected: Boolean = false,
+    var animationPhase: Float = 0f
+)
+
+/**
+ * Modelo de datos para un poder del jugador.
+ * Facilita que el sistema de reduccion de CDR simplemente reste milisegundos a lastUsed.
+ */
+data class PowerUp(
+    val name: String,
+    val duration: Long = 0,
+    val cooldown: Long,
+    var lastUsed: Long = 0,
+    var isActive: Boolean = false,
+    var activeTimer: Float = 0f,
+    var cooldownTimer: Float = 0f
+) {
+    val isOnCooldown: Boolean get() = cooldownTimer > 0f && !isActive
+    val isReady: Boolean get() = !isActive && cooldownTimer <= 0f
+
+    /**
+     * Fraccion de cooldown restante (0.0 a 1.0) para el arco de progreso visual
+     */
+    val cooldownFraction: Float
+        get() = if (cooldown > 0) (cooldownTimer / (cooldown / 1000f)).coerceIn(0f, 1f) else 0f
+
+    /**
+     * Fraccion de duracion restante (0.0 a 1.0)
+     */
+    val activeFraction: Float
+        get() = if (duration > 0) (activeTimer / (duration / 1000f)).coerceIn(0f, 1f) else 0f
+}
