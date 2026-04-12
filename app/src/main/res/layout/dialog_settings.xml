@@ -1,55 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="16dp">
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_music"
+                android:textSize="16sp"
+                android:contentDescription="@string/cd_settings_music" />
+
+            <Switch
+                android:id="@+id/switchMusic"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:contentDescription="@string/cd_switch_music" />
+        </LinearLayout>
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/settings_music"
-            android:textSize="16sp"
-            android:contentDescription="@string/cd_settings_music" />
+            android:text="@string/settings_music_hint"
+            android:textSize="13sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@string/cd_settings_music_hint" />
 
-        <Switch
-            android:id="@+id/switchMusic"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
-            android:contentDescription="@string/cd_switch_music" />
-    </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_sfx"
+                android:textSize="16sp"
+                android:contentDescription="@string/cd_settings_sfx" />
+
+            <Switch
+                android:id="@+id/switchSfx"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:contentDescription="@string/cd_switch_sfx" />
+        </LinearLayout>
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/settings_sfx"
+            android:text="@string/settings_power_bar_title"
             android:textSize="16sp"
-            android:contentDescription="@string/cd_settings_sfx" />
+            android:layout_marginBottom="8dp"
+            android:contentDescription="@string/cd_settings_power_bar" />
 
-        <Switch
-            android:id="@+id/switchSfx"
-            android:layout_width="wrap_content"
+        <RadioGroup
+            android:id="@+id/radioPowerBar"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
-            android:contentDescription="@string/cd_switch_sfx" />
-    </LinearLayout>
+            android:layout_marginBottom="16dp">
 
-</LinearLayout>
+            <RadioButton
+                android:id="@+id/radioPowerBottom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/settings_power_bottom"
+                android:contentDescription="@string/cd_radio_power_bottom" />
+
+            <RadioButton
+                android:id="@+id/radioPowerLeft"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/settings_power_left"
+                android:contentDescription="@string/cd_radio_power_left" />
+
+            <RadioButton
+                android:id="@+id/radioPowerRight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/settings_power_right"
+                android:contentDescription="@string/cd_radio_power_right" />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/textVersionInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:fontFamily="monospace"
+            android:paddingTop="8dp"
+            android:contentDescription="@string/cd_settings_version" />
+
+    </LinearLayout>
+</ScrollView>

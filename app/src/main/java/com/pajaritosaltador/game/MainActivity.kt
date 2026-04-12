@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
+import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
@@ -19,7 +20,6 @@ import androidx.lifecycle.ViewModelProvider
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: GameViewModel
-    private lateinit var pipeViewModel: PipeViewModel
     private lateinit var gameView: GameView
 
     private lateinit var startScreen: LinearLayout
@@ -72,10 +72,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         viewModel = ViewModelProvider(this)[GameViewModel::class.java]
-        pipeViewModel = ViewModelProvider(this)[PipeViewModel::class.java]
 
         bindViews()
-        gameView.attachPipeViewModel(pipeViewModel)
+        applyPowerBarLayout()
         setupGameView()
         setupButtons()
         observeViewModel()
@@ -251,18 +250,59 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Muestra el dialogo de ajustes con opciones de musica y sonido
+     * Coloca la barra de poderes segun preferencia (abajo, izquierda o derecha).
+     */
+    private fun applyPowerBarLayout() {
+        val lp = powerUpContainer.layoutParams as FrameLayout.LayoutParams
+        val sideMargin = (10 * resources.displayMetrics.density).toInt()
+        when (viewModel.getPowerBarPosition()) {
+            GameViewModel.PowerBarPosition.BOTTOM -> {
+                lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                lp.setMargins(0, 0, 0, 0)
+                powerUpContainer.orientation = LinearLayout.HORIZONTAL
+            }
+            GameViewModel.PowerBarPosition.LEFT -> {
+                lp.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                lp.setMargins(sideMargin, 0, 0, 0)
+                powerUpContainer.orientation = LinearLayout.VERTICAL
+            }
+            GameViewModel.PowerBarPosition.RIGHT -> {
+                lp.gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                lp.setMargins(0, 0, sideMargin, 0)
+                powerUpContainer.orientation = LinearLayout.VERTICAL
+            }
+        }
+        powerUpContainer.layoutParams = lp
+    }
+
+    /**
+     * Muestra el dialogo de ajustes: musica, efectos, posicion de poderes e informacion de version.
      */
     private fun showSettingsDialog() {
         val musicEnabled = viewModel.musicEnabled.value ?: true
         val sfxEnabled = viewModel.sfxEnabled.value ?: true
+        val currentPos = viewModel.getPowerBarPosition()
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_settings, null)
         val switchMusic = dialogView.findViewById<Switch>(R.id.switchMusic)
         val switchSfx = dialogView.findViewById<Switch>(R.id.switchSfx)
+        val radioGroup = dialogView.findViewById<RadioGroup>(R.id.radioPowerBar)
+        val textVersion = dialogView.findViewById<TextView>(R.id.textVersionInfo)
 
         switchMusic.isChecked = musicEnabled
         switchSfx.isChecked = sfxEnabled
+        textVersion.text = getString(
+            R.string.settings_version_line,
+            BuildConfig.VERSION_NAME,
+            BuildConfig.VERSION_CODE
+        )
+        radioGroup.check(
+            when (currentPos) {
+                GameViewModel.PowerBarPosition.LEFT -> R.id.radioPowerLeft
+                GameViewModel.PowerBarPosition.RIGHT -> R.id.radioPowerRight
+                GameViewModel.PowerBarPosition.BOTTOM -> R.id.radioPowerBottom
+            }
+        )
 
         AlertDialog.Builder(this, R.style.SettingsDialog)
             .setTitle(R.string.settings_title)
@@ -270,6 +310,16 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton(R.string.settings_ok) { dialog, _ ->
                 if (switchMusic.isChecked != musicEnabled) viewModel.toggleMusic()
                 if (switchSfx.isChecked != sfxEnabled) viewModel.toggleSfx()
+
+                val newPos = when (radioGroup.checkedRadioButtonId) {
+                    R.id.radioPowerLeft -> GameViewModel.PowerBarPosition.LEFT
+                    R.id.radioPowerRight -> GameViewModel.PowerBarPosition.RIGHT
+                    else -> GameViewModel.PowerBarPosition.BOTTOM
+                }
+                if (newPos != currentPos) {
+                    viewModel.setPowerBarPosition(newPos)
+                    applyPowerBarLayout()
+                }
                 dialog.dismiss()
             }
             .show()

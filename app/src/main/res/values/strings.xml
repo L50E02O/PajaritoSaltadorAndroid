@@ -15,10 +15,16 @@
     <string name="ability_active">Escudo Activo</string>
     <string name="ability_cooldown">En Cooldown</string>
 
-    <!-- Ajustes -->
-    <string name="settings_title">Ajustes</string>
-    <string name="settings_music">Musica</string>
+    <!-- Ajustes y accesibilidad -->
+    <string name="settings_title">Ajustes y accesibilidad</string>
+    <string name="settings_music">Musica de fondo</string>
+    <string name="settings_music_hint">Desactiva para silenciar la musica durante el juego.</string>
     <string name="settings_sfx">Efectos de sonido</string>
+    <string name="settings_power_bar_title">Posicion de los botones de poderes</string>
+    <string name="settings_power_bottom">Abajo centrados</string>
+    <string name="settings_power_left">Lado izquierdo</string>
+    <string name="settings_power_right">Lado derecho</string>
+    <string name="settings_version_line">Version: %1$s (codigo %2$d)</string>
     <string name="settings_ok">Aceptar</string>
 
     <!-- Pausa -->
@@ -31,7 +37,7 @@
     <string name="cd_score">Puntuacion actual</string>
     <string name="cd_high_score">Record de puntuacion</string>
     <string name="cd_final_score">Puntuacion final</string>
-    <string name="cd_settings">Abrir ajustes</string>
+    <string name="cd_settings">Abrir ajustes y accesibilidad</string>
     <string name="cd_start_button">Comenzar partida</string>
     <string name="cd_restart_button">Reiniciar partida</string>
     <string name="cd_power_invincibility">Activar invencibilidad</string>
@@ -44,6 +50,12 @@
     <string name="cd_settings_sfx">Opcion de efectos de sonido</string>
     <string name="cd_switch_music">Activar o desactivar musica</string>
     <string name="cd_switch_sfx">Activar o desactivar efectos de sonido</string>
+    <string name="cd_settings_music_hint">Descripcion: silenciar musica de fondo</string>
+    <string name="cd_settings_power_bar">Elegir posicion de la barra de poderes</string>
+    <string name="cd_radio_power_bottom">Botones de poderes abajo centrados</string>
+    <string name="cd_radio_power_left">Botones de poderes en el lado izquierdo</string>
+    <string name="cd_radio_power_right">Botones de poderes en el lado derecho</string>
+    <string name="cd_settings_version">Informacion de version de la aplicacion</string>
     <string name="cd_pause">Pausar partida</string>
     <string name="cd_resume_button">Reanudar partida</string>
     <string name="cd_quit_button">Salir al menu principal</string>

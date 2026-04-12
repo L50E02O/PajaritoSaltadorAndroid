@@ -12,6 +12,12 @@ import androidx.lifecycle.MutableLiveData
  */
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
+    enum class PowerBarPosition {
+        BOTTOM,
+        LEFT,
+        RIGHT
+    }
+
     private val prefs = application.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
 
     private val _score = MutableLiveData(0)
@@ -28,6 +34,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _sfxEnabled = MutableLiveData(prefs.getBoolean("sfx_enabled", true))
     val sfxEnabled: LiveData<Boolean> = _sfxEnabled
+
+    private val _powerBarPosition = MutableLiveData(loadPowerBarPosition())
+    val powerBarPosition: LiveData<PowerBarPosition> = _powerBarPosition
+
+    private fun loadPowerBarPosition(): PowerBarPosition {
+        val raw = prefs.getString("power_bar_position", PowerBarPosition.BOTTOM.name)
+        return try {
+            PowerBarPosition.valueOf(raw ?: PowerBarPosition.BOTTOM.name)
+        } catch (_: IllegalArgumentException) {
+            PowerBarPosition.BOTTOM
+        }
+    }
 
     /**
      * Actualiza el puntaje actual
@@ -67,6 +85,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val newValue = !(_sfxEnabled.value ?: true)
         _sfxEnabled.postValue(newValue)
         prefs.edit().putBoolean("sfx_enabled", newValue).apply()
+    }
+
+    /**
+     * Posicion de la barra de botones de poderes (persistida).
+     */
+    fun getPowerBarPosition(): PowerBarPosition = _powerBarPosition.value ?: loadPowerBarPosition()
+
+    fun setPowerBarPosition(position: PowerBarPosition) {
+        _powerBarPosition.value = position
+        prefs.edit().putString("power_bar_position", position.name).apply()
     }
 
     /**
