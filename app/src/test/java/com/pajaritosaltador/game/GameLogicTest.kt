@@ -139,6 +139,20 @@ class GameLogicTest {
         )
     }
 
+    @Test
+    fun `update - backgroundScrollX avanza de forma continua sin reinicio brusco`() {
+        game.startGame()
+        var prev = game.backgroundScrollX
+        repeat(400) {
+            game.update(1f / 60f, false)
+            assertTrue(
+                "El scroll de fondo debe aumentar monotonicamente",
+                game.backgroundScrollX >= prev - 0.001f
+            )
+            prev = game.backgroundScrollX
+        }
+    }
+
     // =====================================================================
     // GENERACION DE TUBERIAS
     // =====================================================================
@@ -185,16 +199,21 @@ class GameLogicTest {
     @Test
     fun `update - las tuberias se mueven hacia la izquierda`() {
         game.startGame()
-        game.update(2f, false)
+        val dt = 1f / 60f
+        repeat(100) {
+            game.update(dt, true)
+        }
 
-        val initialX = game.pipes.firstOrNull()?.x ?: return
-        game.update(0.5f, false)
-        val newX = game.pipes.firstOrNull()?.x ?: return
-
-        assertTrue(
-            "Las tuberias deben moverse hacia la izquierda (X disminuye)",
-            newX < initialX
-        )
+        assertTrue("Debe haberse generado al menos un par", game.pipes.size >= 2)
+        val initialXs = game.pipes.map { it.x }
+        game.update(dt, true)
+        assertEquals(game.pipes.size, initialXs.size)
+        for (i in game.pipes.indices) {
+            assertTrue(
+                "La tuberia $i debe moverse hacia la izquierda",
+                game.pipes[i].x < initialXs[i]
+            )
+        }
     }
 
     // =====================================================================
@@ -322,11 +341,16 @@ class GameLogicTest {
     @Test
     fun `speedMultiplier - es 1_50 cuando modo rapido esta activo`() {
         game.startGame()
-        game.activateSpeedX2()
+        assertTrue(
+            "El poder velocidad debe activarse en partida",
+            game.activateSpeedX2()
+        )
 
         assertEquals(
             "El multiplicador debe ser 1.50 con modo rapido activo",
-            1.50, game.speedMultiplier
+            1.50f,
+            game.speedMultiplier,
+            0.001f
         )
     }
 

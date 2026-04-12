@@ -133,9 +133,6 @@ class GameLogic(
         checkCollisions()
 
         backgroundScrollX += pipeSpeed * effectiveDelta * 0.3f
-        if (backgroundScrollX > viewportWidth) {
-            backgroundScrollX -= viewportWidth
-        }
     }
 
     /**

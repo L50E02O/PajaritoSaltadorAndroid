@@ -30,9 +30,6 @@ class GameView @JvmOverloads constructor(
     lateinit var gameLogic: GameLogic
         private set
 
-    /** MVVM: sincroniza posiciones de tuberias para observadores; el dibujo usa esta fuente si existe. */
-    private var pipeViewModel: PipeViewModel? = null
-
     // Paints reutilizables
     private val birdPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -48,11 +45,6 @@ class GameView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
     private val groundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val x2OverlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(30, 255, 100, 0)
-        style = Paint.Style.FILL
-    }
-
     // Paints cacheados para evitar allocations en el game loop
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(40, 0, 0, 0)
@@ -63,7 +55,7 @@ class GameView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
     private val x2GlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(60, 255, 100, 0)
+        color = Color.argb(45, 255, 120, 40)
         style = Paint.Style.FILL
     }
     private val deathRedPaint = Paint().apply { color = Color.argb(76, 255, 0, 0) }
@@ -94,14 +86,16 @@ class GameView @JvmOverloads constructor(
     private val groundBrown = Color.parseColor("#8D6E63")
     private val groundGreen = Color.parseColor("#66BB6A")
 
-    // Nubes con posiciones relativas al viewport
-    private data class Cloud(val baseX: Float, val y: Float, val scale: Float)
+    // Nubes: base horizontal en [0,1], parallax distinto por capa (bucle continuo sin reset global)
+    private data class Cloud(val baseX: Float, val y: Float, val scale: Float, val parallax: Float)
     private val clouds = listOf(
-        Cloud(0.1f, 0.12f, 1f),
-        Cloud(0.55f, 0.08f, 1.3f),
-        Cloud(0.3f, 0.22f, 0.8f),
-        Cloud(0.75f, 0.18f, 1.1f),
-        Cloud(0.9f, 0.28f, 0.7f)
+        Cloud(0.05f, 0.10f, 1.0f, 0.32f),
+        Cloud(0.38f, 0.14f, 0.85f, 0.26f),
+        Cloud(0.72f, 0.09f, 1.25f, 0.38f),
+        Cloud(0.18f, 0.22f, 0.75f, 0.22f),
+        Cloud(0.55f, 0.20f, 1.1f, 0.30f),
+        Cloud(0.88f, 0.16f, 0.95f, 0.34f),
+        Cloud(0.28f, 0.28f, 0.65f, 0.18f)
     )
 
     // Input
@@ -178,10 +172,6 @@ class GameView @JvmOverloads constructor(
 
     fun resumeGame() {
         gameLogic.resumeGame()
-    }
-
-    fun attachPipeViewModel(vm: PipeViewModel) {
-        pipeViewModel = vm
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) { resume() }
@@ -292,17 +282,9 @@ class GameView @JvmOverloads constructor(
 
         val strokeViewport = 2f * context.resources.displayMetrics.density / scale
 
-        pipeViewModel?.syncFromGameLogic(gameLogic.pipes)
-        val vmPipes = pipeViewModel?.pipes?.value
-        if (vmPipes != null) {
-            for (i in vmPipes.indices) {
-                RetroPipeDrawer.draw(canvas, vmPipes[i], strokeViewport, viewportWidth)
-            }
-        } else {
-            val pipes = gameLogic.pipes
-            for (i in pipes.indices) {
-                RetroPipeDrawer.draw(canvas, pipes[i], strokeViewport, viewportWidth)
-            }
+        val pipes = gameLogic.pipes
+        for (i in pipes.indices) {
+            RetroPipeDrawer.draw(canvas, pipes[i], strokeViewport, viewportWidth)
         }
         val tumbles = gameLogic.pipeTumbleAnimations
         for (i in tumbles.indices) {
@@ -315,10 +297,6 @@ class GameView @JvmOverloads constructor(
             drawCollectible(canvas, collectibles[i])
         }
         drawBird(canvas)
-
-        if (gameLogic.powerUpManager.speedX2.isActive) {
-            canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, x2OverlayPaint)
-        }
 
         canvas.restore()
     }
@@ -335,10 +313,13 @@ class GameView @JvmOverloads constructor(
         canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, bgPaint)
         bgPaint.shader = null
 
-        val scrollOffset = gameLogic.backgroundScrollX
+        val scroll = gameLogic.backgroundScrollX
+        val period = viewportWidth + 200f
         for (i in clouds.indices) {
             val cloud = clouds[i]
-            val cx = ((cloud.baseX * viewportWidth - scrollOffset * cloud.scale * 0.5f) % (viewportWidth + 80f) + viewportWidth + 80f) % (viewportWidth + 80f) - 40f
+            val drift = scroll * cloud.parallax + cloud.baseX * period
+            val wrapped = ((drift % period) + period) % period
+            val cx = wrapped - 50f
             drawCloud(canvas, cx, cloud.y * viewportHeight, cloud.scale)
         }
     }
