@@ -12,199 +12,6 @@
         android:focusable="true"
         android:focusableInTouchMode="true" />
 
-    <!-- HUD superior: Score + Engranaje -->
-    <LinearLayout
-        android:id="@+id/hudTop"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="12dp">
-
-        <TextView
-            android:id="@+id/scoreText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="0"
-            android:textColor="@color/text_white"
-            android:textSize="36sp"
-            android:textStyle="bold"
-            android:shadowColor="@color/black"
-            android:shadowDx="2"
-            android:shadowDy="2"
-            android:shadowRadius="4"
-            android:contentDescription="@string/cd_score"
-            android:gravity="center" />
-
-        <ImageButton
-            android:id="@+id/pauseButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_pause"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/cd_pause"
-            android:padding="8dp"
-            android:visibility="gone" />
-
-        <ImageButton
-            android:id="@+id/settingsButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_settings_gear"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/cd_settings"
-            android:padding="8dp"
-            android:layout_marginEnd="4dp" />
-    </LinearLayout>
-
-    <!-- High Score debajo del HUD -->
-    <TextView
-        android:id="@+id/highScoreText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|end"
-        android:layout_marginTop="56dp"
-        android:layout_marginEnd="16dp"
-        android:text="@string/high_score"
-        android:textColor="@color/text_white"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:shadowColor="@color/black"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:contentDescription="@string/cd_high_score" />
-
-    <!-- Botones de poderes en la parte inferior -->
-    <LinearLayout
-        android:id="@+id/powerUpContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="12dp"
-        android:visibility="gone">
-
-        <!-- Invencibilidad -->
-        <FrameLayout
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:layout_marginHorizontal="8dp">
-
-            <com.pajaritosaltador.game.CooldownArcView
-                android:id="@+id/arcInvincibility"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/cd_arc_invincibility" />
-
-            <ImageButton
-                android:id="@+id/btnInvincibility"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center"
-                android:background="@drawable/power_button_bg"
-                android:src="@drawable/ic_shield"
-                android:padding="10dp"
-                android:contentDescription="@string/cd_power_invincibility"
-                android:minWidth="48dp"
-                android:minHeight="48dp" />
-
-            <TextView
-                android:id="@+id/txtCdInvincibility"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center_horizontal"
-                android:textColor="@color/text_white"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:shadowColor="@color/black"
-                android:shadowDx="1"
-                android:shadowDy="1"
-                android:shadowRadius="2"
-                android:visibility="gone" />
-        </FrameLayout>
-
-        <!-- Modo velocidad x1.75 -->
-        <FrameLayout
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:layout_marginHorizontal="8dp">
-
-            <com.pajaritosaltador.game.CooldownArcView
-                android:id="@+id/arcSpeedX2"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/cd_arc_speed" />
-
-            <ImageButton
-                android:id="@+id/btnSpeedX2"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center"
-                android:background="@drawable/power_button_bg"
-                android:src="@drawable/ic_speed"
-                android:padding="10dp"
-                android:contentDescription="@string/cd_power_speed"
-                android:minWidth="48dp"
-                android:minHeight="48dp" />
-
-            <TextView
-                android:id="@+id/txtCdSpeedX2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center_horizontal"
-                android:textColor="@color/text_white"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:shadowColor="@color/black"
-                android:shadowDx="1"
-                android:shadowDy="1"
-                android:shadowRadius="2"
-                android:visibility="gone" />
-        </FrameLayout>
-
-        <!-- Romper Tuberia -->
-        <FrameLayout
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:layout_marginHorizontal="8dp">
-
-            <com.pajaritosaltador.game.CooldownArcView
-                android:id="@+id/arcBreakPipe"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/cd_arc_break" />
-
-            <ImageButton
-                android:id="@+id/btnBreakPipe"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center"
-                android:background="@drawable/power_button_bg"
-                android:src="@drawable/ic_break"
-                android:padding="10dp"
-                android:contentDescription="@string/cd_power_break"
-                android:minWidth="48dp"
-                android:minHeight="48dp" />
-
-            <TextView
-                android:id="@+id/txtCdBreakPipe"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center_horizontal"
-                android:textColor="@color/text_white"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:shadowColor="@color/black"
-                android:shadowDx="1"
-                android:shadowDy="1"
-                android:shadowRadius="2"
-                android:visibility="gone" />
-        </FrameLayout>
-    </LinearLayout>
-
     <!-- Pantalla de Inicio -->
     <LinearLayout
         android:id="@+id/startScreen"
@@ -369,5 +176,213 @@
             android:minHeight="48dp"
             android:contentDescription="@string/cd_restart_button" />
     </LinearLayout>
+
+    <!-- Barra de poderes: arrastrar con el asa; encima del menu para poder colocarla antes de jugar -->
+    <FrameLayout
+        android:id="@+id/powerBarRoot"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:id="@+id/powerUpContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/powerBarDragHandle"
+                android:layout_width="40dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_power_bar_drag"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_drag_handle" />
+
+            <FrameLayout
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginHorizontal="4dp">
+
+                <com.pajaritosaltador.game.CooldownArcView
+                    android:id="@+id/arcInvincibility"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/cd_arc_invincibility" />
+
+                <ImageButton
+                    android:id="@+id/btnInvincibility"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/power_button_bg"
+                    android:contentDescription="@string/cd_power_invincibility"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_shield" />
+
+                <TextView
+                    android:id="@+id/txtCdInvincibility"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:shadowColor="@color/black"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"
+                    android:textColor="@color/text_white"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginHorizontal="4dp">
+
+                <com.pajaritosaltador.game.CooldownArcView
+                    android:id="@+id/arcSpeedX2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/cd_arc_speed" />
+
+                <ImageButton
+                    android:id="@+id/btnSpeedX2"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/power_button_bg"
+                    android:contentDescription="@string/cd_power_speed"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_speed" />
+
+                <TextView
+                    android:id="@+id/txtCdSpeedX2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:shadowColor="@color/black"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"
+                    android:textColor="@color/text_white"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginHorizontal="4dp">
+
+                <com.pajaritosaltador.game.CooldownArcView
+                    android:id="@+id/arcBreakPipe"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/cd_arc_break" />
+
+                <ImageButton
+                    android:id="@+id/btnBreakPipe"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/power_button_bg"
+                    android:contentDescription="@string/cd_power_break"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_break" />
+
+                <TextView
+                    android:id="@+id/txtCdBreakPipe"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:shadowColor="@color/black"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"
+                    android:textColor="@color/text_white"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- HUD superior (encima de overlays para tuerquita siempre usable) -->
+    <LinearLayout
+        android:id="@+id/hudTop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/scoreText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="@string/cd_score"
+            android:gravity="center"
+            android:shadowColor="@color/black"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="4"
+            android:text="0"
+            android:textColor="@color/text_white"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/pauseButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_pause"
+            android:padding="8dp"
+            android:src="@drawable/ic_pause"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/settingsButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_settings"
+            android:padding="8dp"
+            android:src="@drawable/ic_settings_gear" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/highScoreText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="56dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="@string/cd_high_score"
+        android:shadowColor="@color/black"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="3"
+        android:text="@string/high_score"
+        android:textColor="@color/text_white"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
 </FrameLayout>

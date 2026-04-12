@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
@@ -24,7 +25,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var startScreen: LinearLayout
     private lateinit var gameOverScreen: LinearLayout
+    private lateinit var powerBarRoot: FrameLayout
     private lateinit var powerUpContainer: LinearLayout
+    private lateinit var powerBarDragHandle: ImageButton
     private lateinit var startButton: Button
     private lateinit var restartButton: Button
     private lateinit var scoreText: TextView
@@ -35,6 +38,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pauseScreen: LinearLayout
     private lateinit var resumeButton: Button
     private lateinit var quitButton: Button
+
+    private lateinit var soundEffects: SoundEffectsPlayer
+
+    private var lastScoreForSfx: Int = 0
 
     // Botones de poderes
     private lateinit var btnInvincibility: ImageButton
@@ -47,7 +54,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var txtCdSpeedX2: TextView
     private lateinit var txtCdBreakPipe: TextView
 
-    // Servicio de musica
     private var musicService: MusicService? = null
     private var musicBound = false
 
@@ -72,12 +78,16 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         viewModel = ViewModelProvider(this)[GameViewModel::class.java]
+        soundEffects = SoundEffectsPlayer { viewModel.sfxEnabled.value != false }
 
         bindViews()
-        applyPowerBarLayout()
+        setupPowerBarDrag()
         setupGameView()
         setupButtons()
         observeViewModel()
+
+        syncPowerBarUiForState(gameView.gameLogic.state)
+        positionPowerBarFromPrefs()
 
         val intent = Intent(this, MusicService::class.java)
         bindService(intent, musicConnection, Context.BIND_AUTO_CREATE)
@@ -87,7 +97,9 @@ class MainActivity : AppCompatActivity() {
         gameView = findViewById(R.id.gameView)
         startScreen = findViewById(R.id.startScreen)
         gameOverScreen = findViewById(R.id.gameOverScreen)
+        powerBarRoot = findViewById(R.id.powerBarRoot)
         powerUpContainer = findViewById(R.id.powerUpContainer)
+        powerBarDragHandle = findViewById(R.id.powerBarDragHandle)
         startButton = findViewById(R.id.startButton)
         restartButton = findViewById(R.id.restartButton)
         scoreText = findViewById(R.id.scoreText)
@@ -116,6 +128,12 @@ class MainActivity : AppCompatActivity() {
         gameView.onScoreUpdate = { score ->
             scoreText.text = score.toString()
             viewModel.updateScore(score)
+            if (gameView.gameLogic.state == GameLogic.GameState.PLAYING &&
+                score > lastScoreForSfx
+            ) {
+                soundEffects.playScorePoint()
+            }
+            lastScoreForSfx = score
         }
 
         gameView.onHighScoreUpdate = { hs ->
@@ -126,21 +144,22 @@ class MainActivity : AppCompatActivity() {
         gameView.onGameOver = { score ->
             gameOverScreen.visibility = View.VISIBLE
             finalScoreText.text = getString(R.string.score, score)
-            powerUpContainer.visibility = View.GONE
             pauseButton.visibility = View.GONE
             viewModel.updateGameState(GameLogic.GameState.GAME_OVER)
             musicService?.pauseMusic()
+            syncPowerBarUiForState(GameLogic.GameState.GAME_OVER)
         }
 
         gameView.onGameStart = {
             startScreen.visibility = View.GONE
             gameOverScreen.visibility = View.GONE
             pauseScreen.visibility = View.GONE
-            powerUpContainer.visibility = View.VISIBLE
             pauseButton.visibility = View.VISIBLE
             scoreText.text = "0"
+            lastScoreForSfx = 0
             viewModel.updateGameState(GameLogic.GameState.PLAYING)
             updateAllPowerUpUI()
+            syncPowerBarUiForState(GameLogic.GameState.PLAYING)
             if (viewModel.musicEnabled.value == true) {
                 musicService?.restart()
             }
@@ -150,19 +169,23 @@ class MainActivity : AppCompatActivity() {
             updateAllPowerUpUI()
         }
 
+        gameView.onCollectiblePicked = {
+            soundEffects.playCollectibleBonus()
+        }
+
         gameView.onPauseChanged = { paused ->
             if (paused) {
                 pauseScreen.visibility = View.VISIBLE
-                powerUpContainer.visibility = View.GONE
                 viewModel.updateGameState(GameLogic.GameState.PAUSED)
                 musicService?.pauseMusic()
+                syncPowerBarUiForState(GameLogic.GameState.PAUSED)
             } else {
                 pauseScreen.visibility = View.GONE
-                powerUpContainer.visibility = View.VISIBLE
                 viewModel.updateGameState(GameLogic.GameState.PLAYING)
                 if (viewModel.musicEnabled.value == true) {
                     musicService?.play()
                 }
+                syncPowerBarUiForState(GameLogic.GameState.PLAYING)
             }
         }
     }
@@ -171,9 +194,15 @@ class MainActivity : AppCompatActivity() {
         startButton.setOnClickListener { gameView.startGame() }
         restartButton.setOnClickListener { gameView.startGame() }
 
-        btnInvincibility.setOnClickListener { gameView.activateInvincibility() }
-        btnSpeedX2.setOnClickListener { gameView.activateSpeedX2() }
-        btnBreakPipe.setOnClickListener { gameView.destroyNearestPipe() }
+        btnInvincibility.setOnClickListener {
+            if (gameView.activateInvincibility()) soundEffects.playPowerActivated()
+        }
+        btnSpeedX2.setOnClickListener {
+            if (gameView.activateSpeedX2()) soundEffects.playPowerActivated()
+        }
+        btnBreakPipe.setOnClickListener {
+            if (gameView.destroyNearestPipe()) soundEffects.playPipeDestroyed()
+        }
 
         settingsButton.setOnClickListener { showSettingsDialog() }
 
@@ -189,10 +218,10 @@ class MainActivity : AppCompatActivity() {
             gameView.gameLogic.returnToStart()
             pauseScreen.visibility = View.GONE
             pauseButton.visibility = View.GONE
-            powerUpContainer.visibility = View.GONE
             startScreen.visibility = View.VISIBLE
             viewModel.updateGameState(GameLogic.GameState.START)
             musicService?.pauseMusic()
+            syncPowerBarUiForState(GameLogic.GameState.START)
         }
     }
 
@@ -204,9 +233,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Actualiza la UI de los tres poderes: arcos, textos de cooldown y alpha de botones
-     */
     private fun updateAllPowerUpUI() {
         val pm = gameView.gameLogic.powerUpManager
 
@@ -249,44 +275,117 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Coloca la barra de poderes segun preferencia (abajo, izquierda o derecha).
-     */
-    private fun applyPowerBarLayout() {
-        val lp = powerUpContainer.layoutParams as FrameLayout.LayoutParams
-        val sideMargin = (10 * resources.displayMetrics.density).toInt()
-        when (viewModel.getPowerBarPosition()) {
-            GameViewModel.PowerBarPosition.BOTTOM -> {
-                lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                lp.setMargins(0, 0, 0, 0)
-                powerUpContainer.orientation = LinearLayout.HORIZONTAL
-            }
-            GameViewModel.PowerBarPosition.LEFT -> {
-                lp.gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                lp.setMargins(sideMargin, 0, 0, 0)
-                powerUpContainer.orientation = LinearLayout.VERTICAL
-            }
-            GameViewModel.PowerBarPosition.RIGHT -> {
-                lp.gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                lp.setMargins(0, 0, sideMargin, 0)
-                powerUpContainer.orientation = LinearLayout.VERTICAL
+    private fun setPowerButtonsEnabled(enabled: Boolean) {
+        updateAllPowerUpUI()
+        if (!enabled) {
+            for (b in listOf(btnInvincibility, btnSpeedX2, btnBreakPipe)) {
+                b.isEnabled = false
+                b.alpha = 0.45f
             }
         }
-        powerUpContainer.layoutParams = lp
     }
 
-    /**
-     * Muestra el dialogo de ajustes: musica, efectos, posicion de poderes e informacion de version.
-     */
+    private fun syncPowerBarUiForState(state: GameLogic.GameState) {
+        when (state) {
+            GameLogic.GameState.START -> {
+                powerBarRoot.visibility = View.VISIBLE
+                powerUpContainer.visibility = View.VISIBLE
+                setPowerButtonsEnabled(false)
+                positionPowerBarFromPrefs()
+                updateAllPowerUpUI()
+            }
+            GameLogic.GameState.PLAYING -> {
+                powerBarRoot.visibility = View.VISIBLE
+                powerUpContainer.visibility = View.VISIBLE
+                setPowerButtonsEnabled(true)
+            }
+            GameLogic.GameState.PAUSED -> {
+                powerBarRoot.visibility = View.GONE
+            }
+            GameLogic.GameState.GAME_OVER -> {
+                powerBarRoot.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun positionPowerBarFromPrefs() {
+        powerBarRoot.post {
+            val rw = powerBarRoot.width
+            val rh = powerBarRoot.height
+            if (rw <= 0 || rh <= 0) return@post
+            powerUpContainer.measure(
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            val cw = powerUpContainer.measuredWidth
+            val ch = powerUpContainer.measuredHeight
+            val cx = viewModel.getPowerBarCenterX()
+            val cy = viewModel.getPowerBarCenterY()
+            val lp = powerUpContainer.layoutParams as FrameLayout.LayoutParams
+            lp.gravity = Gravity.TOP or Gravity.START
+            lp.leftMargin = (rw * cx - cw / 2f).toInt().coerceIn(0, (rw - cw).coerceAtLeast(0))
+            lp.topMargin = (rh * cy - ch / 2f).toInt().coerceIn(0, (rh - ch).coerceAtLeast(0))
+            powerUpContainer.layoutParams = lp
+        }
+    }
+
+    private fun setupPowerBarDrag() {
+        var lastRawX = 0f
+        var lastRawY = 0f
+        powerBarDragHandle.setOnTouchListener { _, event ->
+            val root = powerBarRoot
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastRawX = event.rawX
+                    lastRawY = event.rawY
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - lastRawX
+                    val dy = event.rawY - lastRawY
+                    lastRawX = event.rawX
+                    lastRawY = event.rawY
+                    val rw = root.width
+                    val rh = root.height
+                    if (rw <= 0 || rh <= 0) return@setOnTouchListener true
+                    val lp = powerUpContainer.layoutParams as FrameLayout.LayoutParams
+                    var left = lp.leftMargin + dx.toInt()
+                    var top = lp.topMargin + dy.toInt()
+                    val cw = powerUpContainer.width.coerceAtLeast(powerUpContainer.measuredWidth)
+                    val ch = powerUpContainer.height.coerceAtLeast(powerUpContainer.measuredHeight)
+                    left = left.coerceIn(0, (rw - cw).coerceAtLeast(0))
+                    top = top.coerceIn(0, (rh - ch).coerceAtLeast(0))
+                    lp.gravity = Gravity.TOP or Gravity.START
+                    lp.leftMargin = left
+                    lp.topMargin = top
+                    powerUpContainer.layoutParams = lp
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    savePowerBarPositionFromLayout()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun savePowerBarPositionFromLayout() {
+        val rw = powerBarRoot.width
+        val rh = powerBarRoot.height
+        if (rw <= 0 || rh <= 0) return
+        val cx = (powerUpContainer.left + powerUpContainer.width / 2f) / rw
+        val cy = (powerUpContainer.top + powerUpContainer.height / 2f) / rh
+        viewModel.setPowerBarCenter(cx, cy)
+    }
+
     private fun showSettingsDialog() {
         val musicEnabled = viewModel.musicEnabled.value ?: true
         val sfxEnabled = viewModel.sfxEnabled.value ?: true
-        val currentPos = viewModel.getPowerBarPosition()
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_settings, null)
         val switchMusic = dialogView.findViewById<Switch>(R.id.switchMusic)
         val switchSfx = dialogView.findViewById<Switch>(R.id.switchSfx)
-        val radioGroup = dialogView.findViewById<RadioGroup>(R.id.radioPowerBar)
         val textVersion = dialogView.findViewById<TextView>(R.id.textVersionInfo)
 
         switchMusic.isChecked = musicEnabled
@@ -296,13 +395,6 @@ class MainActivity : AppCompatActivity() {
             BuildConfig.VERSION_NAME,
             BuildConfig.VERSION_CODE
         )
-        radioGroup.check(
-            when (currentPos) {
-                GameViewModel.PowerBarPosition.LEFT -> R.id.radioPowerLeft
-                GameViewModel.PowerBarPosition.RIGHT -> R.id.radioPowerRight
-                GameViewModel.PowerBarPosition.BOTTOM -> R.id.radioPowerBottom
-            }
-        )
 
         AlertDialog.Builder(this, R.style.SettingsDialog)
             .setTitle(R.string.settings_title)
@@ -310,16 +402,6 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton(R.string.settings_ok) { dialog, _ ->
                 if (switchMusic.isChecked != musicEnabled) viewModel.toggleMusic()
                 if (switchSfx.isChecked != sfxEnabled) viewModel.toggleSfx()
-
-                val newPos = when (radioGroup.checkedRadioButtonId) {
-                    R.id.radioPowerLeft -> GameViewModel.PowerBarPosition.LEFT
-                    R.id.radioPowerRight -> GameViewModel.PowerBarPosition.RIGHT
-                    else -> GameViewModel.PowerBarPosition.BOTTOM
-                }
-                if (newPos != currentPos) {
-                    viewModel.setPowerBarPosition(newPos)
-                    applyPowerBarLayout()
-                }
                 dialog.dismiss()
             }
             .show()
@@ -328,6 +410,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         gameView.resume()
+        positionPowerBarFromPrefs()
         val state = gameView.gameLogic.state
         if (viewModel.musicEnabled.value == true && state == GameLogic.GameState.PLAYING) {
             musicService?.play()
@@ -344,6 +427,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        soundEffects.release()
         if (musicBound) {
             unbindService(musicConnection)
             musicBound = false

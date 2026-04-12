@@ -12,13 +12,31 @@ import androidx.lifecycle.MutableLiveData
  */
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
-    enum class PowerBarPosition {
-        BOTTOM,
-        LEFT,
-        RIGHT
+    private val prefs = application.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
+
+    init {
+        migrateLegacyPowerBarIfNeeded()
     }
 
-    private val prefs = application.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
+    private fun migrateLegacyPowerBarIfNeeded() {
+        if (prefs.contains(KEY_POWER_BAR_CENTER_X)) return
+        val legacy = prefs.getString("power_bar_position", null)
+        if (legacy != null) {
+            val (x, y) = PowerBarGeometry.centerFromLegacyPosition(legacy)
+            val (cx, cy) = PowerBarGeometry.clampCenter(x, y)
+            prefs.edit()
+                .putFloat(KEY_POWER_BAR_CENTER_X, cx)
+                .putFloat(KEY_POWER_BAR_CENTER_Y, cy)
+                .remove("power_bar_position")
+                .apply()
+        } else {
+            val (cx, cy) = PowerBarGeometry.clampCenter(0.5f, 0.90f)
+            prefs.edit()
+                .putFloat(KEY_POWER_BAR_CENTER_X, cx)
+                .putFloat(KEY_POWER_BAR_CENTER_Y, cy)
+                .apply()
+        }
+    }
 
     private val _score = MutableLiveData(0)
     val score: LiveData<Int> = _score
@@ -34,18 +52,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _sfxEnabled = MutableLiveData(prefs.getBoolean("sfx_enabled", true))
     val sfxEnabled: LiveData<Boolean> = _sfxEnabled
-
-    private val _powerBarPosition = MutableLiveData(loadPowerBarPosition())
-    val powerBarPosition: LiveData<PowerBarPosition> = _powerBarPosition
-
-    private fun loadPowerBarPosition(): PowerBarPosition {
-        val raw = prefs.getString("power_bar_position", PowerBarPosition.BOTTOM.name)
-        return try {
-            PowerBarPosition.valueOf(raw ?: PowerBarPosition.BOTTOM.name)
-        } catch (_: IllegalArgumentException) {
-            PowerBarPosition.BOTTOM
-        }
-    }
 
     /**
      * Actualiza el puntaje actual
@@ -88,17 +94,24 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Posicion de la barra de botones de poderes (persistida).
+     * Centro de la barra de poderes en fraccion del ancho y alto de la pantalla (0-1).
      */
-    fun getPowerBarPosition(): PowerBarPosition = _powerBarPosition.value ?: loadPowerBarPosition()
+    fun getPowerBarCenterX(): Float = prefs.getFloat(KEY_POWER_BAR_CENTER_X, 0.5f)
 
-    fun setPowerBarPosition(position: PowerBarPosition) {
-        _powerBarPosition.value = position
-        prefs.edit().putString("power_bar_position", position.name).apply()
+    fun getPowerBarCenterY(): Float = prefs.getFloat(KEY_POWER_BAR_CENTER_Y, 0.90f)
+
+    fun setPowerBarCenter(x: Float, y: Float) {
+        val (cx, cy) = PowerBarGeometry.clampCenter(x, y)
+        prefs.edit().putFloat(KEY_POWER_BAR_CENTER_X, cx).putFloat(KEY_POWER_BAR_CENTER_Y, cy).apply()
     }
 
     /**
      * Obtiene el high score guardado
      */
     fun getSavedHighScore(): Int = prefs.getInt("high_score", 0)
+
+    companion object {
+        const val KEY_POWER_BAR_CENTER_X = "power_bar_center_x"
+        const val KEY_POWER_BAR_CENTER_Y = "power_bar_center_y"
+    }
 }

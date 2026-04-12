@@ -17,10 +17,16 @@
 
     <!-- Ajustes y accesibilidad -->
     <string name="settings_title">Ajustes y accesibilidad</string>
+    <string name="settings_section_audio">Sonido</string>
+    <string name="settings_section_layout">Pantalla y controles</string>
+    <string name="settings_section_about">Informacion</string>
     <string name="settings_music">Musica de fondo</string>
     <string name="settings_music_hint">Desactiva para silenciar la musica durante el juego.</string>
     <string name="settings_sfx">Efectos de sonido</string>
     <string name="settings_power_bar_title">Posicion de los botones de poderes</string>
+    <string name="settings_power_bar_hint">Elige donde mostrar los tres botones (escudo, velocidad y romper tubo) durante la partida.</string>
+    <string name="settings_power_bar_drag_explain">Mover la barra de poderes</string>
+    <string name="settings_power_bar_drag_detail">Arrastra el icono de tres rayas junto a los botones para colocar la barra donde quieras. La posicion se guarda sola. Puedes hacerlo en el menu o durante la partida.</string>
     <string name="settings_power_bottom">Abajo centrados</string>
     <string name="settings_power_left">Lado izquierdo</string>
     <string name="settings_power_right">Lado derecho</string>
@@ -56,6 +62,7 @@
     <string name="cd_radio_power_left">Botones de poderes en el lado izquierdo</string>
     <string name="cd_radio_power_right">Botones de poderes en el lado derecho</string>
     <string name="cd_settings_version">Informacion de version de la aplicacion</string>
+    <string name="cd_power_bar_drag">Arrastrar barra de poderes para cambiar posicion</string>
     <string name="cd_pause">Pausar partida</string>
     <string name="cd_resume_button">Reanudar partida</string>
     <string name="cd_quit_button">Salir al menu principal</string>

@@ -109,6 +109,8 @@ class GameView @JvmOverloads constructor(
     var onGameOver: ((Int) -> Unit)? = null
     var onGameStart: (() -> Unit)? = null
     var onPowerUpStateChanged: (() -> Unit)? = null
+    /** Solo bonus CDR (sonido); la UI de cooldown sigue en onPowerUpStateChanged */
+    var onCollectiblePicked: (() -> Unit)? = null
     var onPauseChanged: ((Boolean) -> Unit)? = null
 
     private val uiHandler = Handler(Looper.getMainLooper())
@@ -131,7 +133,10 @@ class GameView @JvmOverloads constructor(
             uiHandler.post { onGameOver?.invoke(score) }
         }
         gameLogic.onCollectiblePickup = {
-            uiHandler.post { onPowerUpStateChanged?.invoke() }
+            uiHandler.post {
+                onPowerUpStateChanged?.invoke()
+                onCollectiblePicked?.invoke()
+            }
         }
         gameLogic.onPipeDestroyed = {
             uiHandler.post { onPowerUpStateChanged?.invoke() }
