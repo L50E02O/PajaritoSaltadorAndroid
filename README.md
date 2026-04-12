@@ -22,6 +22,8 @@ La carpeta `releases/` de este repositorio es solo una **ruta en el código** do
 
 Así la release aparece en la página del repo y los visitantes pueden descargar el APK desde GitHub sin clonar el repositorio.
 
+**Guía ampliada** (checklist, `assembleRelease`, tags, `gh release create`, buenas prácticas): carpeta [`doc/`](doc/README.md), archivo [`doc/GUIA_RELEASE_GITHUB.md`](doc/GUIA_RELEASE_GITHUB.md).
+
 ### Opción por línea de comandos (GitHub CLI)
 
 Si tienes [`gh`](https://cli.github.com/) instalado y autenticado:
@@ -46,26 +48,22 @@ flowchart TB
     end
     subgraph vm [ViewModels]
         GameViewModel[GameViewModel - puntaje, estado, ajustes]
-        PipeViewModel[PipeViewModel - tuberias como estado observable]
     end
     subgraph domain [Dominio del juego]
         GameLogic[GameLogic - fisica, colisiones, tuberias, dificultad]
         PowerUpManager[PowerUpManager - cooldowns y duraciones de poderes]
     end
     MainActivity --> GameViewModel
-    MainActivity --> PipeViewModel
     MainActivity --> GameView
     GameView --> GameLogic
-    GameView --> PipeViewModel
     GameLogic --> PowerUpManager
-    PipeViewModel -. sincroniza desde .-> GameLogic
     GameViewModel -. puntaje y estado .-> GameLogic
 ```
 
 - **`GameLogic`**: núcleo del bucle de juego: pájaro, tuberías, coleccionables, estados (`START`, `PLAYING`, `PAUSED`, `GAME_OVER`), física y colisiones. Las magnitudes se basan en **fracciones del ancho y alto del viewport** para mantener proporciones entre dispositivos.
 - **`PowerUpManager`**: concentra la gestión de **enfriamientos** y **duraciones** de los poderes, desacoplada del resto de la lógica.
 - **`GameViewModel`**: estado que interesa a la interfaz (puntaje, récord, música/SFX, estado global del juego) y persistencia del récord y preferencias vía **SharedPreferences**.
-- **`PipeViewModel`**: expone la lista de tuberías como flujo observable (`StateFlow`) para MVVM; la lógica de movimiento sigue en `GameLogic`.
+- **`PipeViewModel`**: clase de apoyo para **pruebas** y patron MVVM; el dibujado en partida usa la lista de tuberías de `GameLogic` directamente en `GameView`.
 - **`GameView`**: `SurfaceView` con renderizado en **Canvas**, hilo de juego dedicado y viewport virtual escalable a la pantalla.
 
 La música de fondo se sirve mediante un **`Service`** (`MusicService`), manteniendo la reproducción desacoplada del ciclo de vida inmediato de la vista.
@@ -117,13 +115,16 @@ La APK generada suele quedar en `app/build/outputs/apk/release/`. Para compartir
 
 - `app/src/main/java/com/pajaritosaltador/game/` — código del juego (lógica, vistas, ViewModels, servicio de música).
 - `app/src/test/` — pruebas unitarias de la lógica.
+- `doc/` — **documentación para desarrolladores** (releases en GitHub, contexto del proyecto y mapa de código); ver [`doc/README.md`](doc/README.md).
 - `releases/` — APK de distribución opcional versionada en el repo (no sustituye a GitHub Releases).
 
 ---
 
 ## Versión actual
 
-- **versionName:** 1.0.0  
+Valores oficiales en `app/build.gradle` (`versionCode` / `versionName`). Referencia:
+
+- **versionName:** 1.1.1  
 - **applicationId:** `com.pajaritosaltador.game`
 
 ---
